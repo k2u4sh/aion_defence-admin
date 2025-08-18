@@ -1,0 +1,49 @@
+{
+  "name": "defence-cart",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "migrate": "node scripts/improved-migrate.js",
+    "migrate:status": "node scripts/migrate-cli.js status",
+    "migrate:up": "node scripts/migrate-cli.js up",
+    "migrate:down": "node scripts/migrate-cli.js down",
+    "migrate:validate": "node scripts/migrate-cli.js validate",
+    "migrate:create": "node scripts/migrate-cli.js create",
+    "migrate:models": "node scripts/migrate-cli.js models",
+    "migrate:health": "node scripts/migrate-cli.js health"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "aos": "^2.3.4",
+    "bcryptjs": "^3.0.2",
+    "commander": "^12.0.0",
+    "dotenv": "^17.2.1",
+    "framer-motion": "^12.23.12",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.17.0",
+    "next": "15.4.5",
+    "nodemailer": "^7.0.5",
+    "react": "19.1.0",
+    "react-day-picker": "^9.8.1",
+    "react-dom": "19.1.0",
+    "react-select": "^5.10.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/aos": "^3.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

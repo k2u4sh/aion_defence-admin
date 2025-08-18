@@ -1,0 +1,1813 @@
+{
+	"info": {
+		"_postman_id": "defence-cart-api-collection",
+		"name": "Defence Cart API Collection",
+		"description": "Complete API collection for Defence Cart e-commerce platform with JWT authentication, categories, subcategories, products, and user management.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+		"item": [
+			{
+				"name": "🏢 Company Registration",
+				"item": [
+					{
+						"name": "Create Company",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"name\": \"Acme Defence Pvt Ltd\",\n  \"logo\": \"https://example.com/logo.png\",\n  \"description\": \"Leading defence supplier\",\n  \"addresses\": [{\n    \"line1\": \"123 Main St\",\n    \"city\": \"Delhi\",\n    \"zipCode\": \"110001\",\n    \"country\": \"India\",\n    \"mobile\": \"+911234567890\",\n    \"email\": \"info@acme.com\"\n  }],\n  \"mailingAddresses\": [],\n  \"parentCompany\": \"Acme Group\",\n  \"parentCompanyNotAvailable\": false,\n  \"website\": \"https://acme.com\",\n  \"brochures\": [\"https://example.com/brochure.pdf\"],\n  \"users\": [{\n    \"name\": \"John Doe\",\n    \"designation\": \"Manager\",\n    \"email\": \"john@acme.com\",\n    \"mobile\": \"+911234567891\",\n    \"isPrimary\": true\n  }],\n  \"subscriptionPlan\": \"multiple\",\n  \"natureOfBusiness\": [\"OEM\", \"Startup\"],\n  \"typeOfBusiness\": [\"Corporate Limited\"],\n  \"registrationNumber\": \"REG123456\",\n  \"yearEstablished\": \"2010\",\n  \"numEmployees\": \"100\",\n  \"servicesOffered\": \"Defence equipment\",\n  \"currency\": \"INR\",\n  \"gstNumber\": \"GSTIN123456\",\n  \"gstCertificates\": [\"https://example.com/gst.pdf\"],\n  \"cin\": \"CIN123456\",\n  \"cinDocuments\": [\"https://example.com/cin.pdf\"],\n  \"categories\": [\"Mechanical Components\", \"Avionics & Embedded Systems\"],\n  \"agreedToTerms\": true\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/company",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "company"]
+							}
+						}
+					}
+				]
+			},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "User Registration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"mobile\": \"+1234567890\",\n  \"companyName\": \"Tech Solutions Inc\",\n  \"companyType\": \"private\",\n  \"roles\": [\"buyer\", \"seller\"],\n  \"country\": \"United States\",\n  \"city\": \"New York\",\n  \"zipCode\": \"10001\",\n  \"businessDescription\": \"Technology solutions and consulting services\",\n  \"businessLicense\": \"BL123456789\",\n  \"taxId\": \"TAX987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/signup",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"signup"
+							]
+						}
+					}
+				},
+				{
+					"name": "OTP Verification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/verify",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"verify"
+							]
+						}
+					}
+				},
+				{
+					"name": "User Login (No OTP Required)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.tokens) {",
+									"        pm.environment.set('accessToken', responseJson.data.tokens.accessToken);",
+									"        pm.environment.set('refreshToken', responseJson.data.tokens.refreshToken);",
+									"        console.log('Tokens saved to environment variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Token Refresh",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.tokens) {",
+									"        pm.environment.set('accessToken', responseJson.data.tokens.accessToken);",
+									"        console.log('New access token saved');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						}
+					}
+				},
+				{
+					"name": "User Profile (Protected)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"profile"
+							]
+						}
+					}
+				},
+				{
+					"name": "User Logout (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"logout"
+							]
+						}
+					}
+				}
+			]
+		},
+    {
+      "name": "🛡️ Admin Auth",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.tokens) {",
+                  "    pm.environment.set('adminAccessToken', json.data.tokens.accessToken);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin#12345\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/admin/auth/login", "host": ["{{baseUrl}}"], "path": ["api","admin","auth","login"] }
+          }
+        },
+        {
+          "name": "Admin Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","admin","auth","logout"] }
+          }
+        },
+        {
+          "name": "Admin Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api","admin","auth","forgot-password"] }
+          }
+        },
+        {
+          "name": "Admin Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"RESET_TOKEN_HERE\",\n  \"newPassword\": \"NewStrong#123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api","admin","auth","reset-password"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Admin Management",
+      "item": [
+        {
+          "name": "List Admins",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"20"}] }
+          }
+        },
+        {
+          "name": "Create Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Super\",\n  \"lastName\": \"Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin#12345\",\n  \"role\": \"super_admin\",\n  \"permissions\": [\"*\"],\n  \"groups\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin", "host": ["{{baseUrl}}"], "path": ["api","admin"] }
+          }
+        },
+        {
+          "name": "Get Admin",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/{{adminId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","{{adminId}}"] }
+          }
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" },{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"admin\",\n  \"permissions\": [\"admin:read\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin/{{adminId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","{{adminId}}"] }
+          }
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/{{adminId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","{{adminId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Permissions",
+      "item": [
+        {"name":"List Permissions","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/permissions?page=1&limit=20","host":["{{baseUrl}}"],"path":["api","admin","permissions"],"query":[{"key":"page","value":"1"},{"key":"limit","value":"20"}]}}},
+        {"name":"Create Permission","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"key\": \"market:read\",\n  \"name\": \"Read Marketplace\",\n  \"category\": \"marketplace\"\n}"},"url":{"raw":"{{baseUrl}}/api/admin/permissions","host":["{{baseUrl}}"],"path":["api","admin","permissions"]}}},
+        {"name":"Get Permission","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/permissions/market:read","host":["{{baseUrl}}"],"path":["api","admin","permissions","market:read"]}}},
+        {"name":"Update Permission","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Read Marketplace (Updated)\"\n}"},"url":{"raw":"{{baseUrl}}/api/admin/permissions/market:read","host":["{{baseUrl}}"],"path":["api","admin","permissions","market:read"]}}},
+        {"name":"Delete Permission","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/permissions/market:read","host":["{{baseUrl}}"],"path":["api","admin","permissions","market:read"]}}}
+      ]
+    },
+    {
+      "name": "🛡️ Roles",
+      "item": [
+        {"name":"List Roles (Managed)","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/roles/manage","host":["{{baseUrl}}"],"path":["api","admin","roles","manage"]}}},
+        {"name":"Create Role","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"key\": \"analyst\",\n  \"name\": \"Analyst\",\n  \"permissions\": [\"user:read\",\"order:read\"]\n}"},"url":{"raw":"{{baseUrl}}/api/admin/roles/manage","host":["{{baseUrl}}"],"path":["api","admin","roles","manage"]}}},
+        {"name":"Get Role","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/roles/manage/analyst","host":["{{baseUrl}}"],"path":["api","admin","roles","manage","analyst"]}}},
+        {"name":"Update Role","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"permissions\": [\"user:read\",\"order:read\",\"product:read\"]\n}"},"url":{"raw":"{{baseUrl}}/api/admin/roles/manage/analyst","host":["{{baseUrl}}"],"path":["api","admin","roles","manage","analyst"]}}},
+        {"name":"Delete Role","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{adminAccessToken}}"}],"url":{"raw":"{{baseUrl}}/api/admin/roles/manage/analyst","host":["{{baseUrl}}"],"path":["api","admin","roles","manage","analyst"]}}}
+      ]
+    },
+    {
+      "name": "🛡️ Admin Groups",
+      "item": [
+        {
+          "name": "List Groups",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/groups?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","groups"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"20"}] }
+          }
+        },
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"managers\",\n  \"description\": \"Management group\",\n  \"permissions\": [\"admin:read\", \"group:write\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin/groups", "host": ["{{baseUrl}}"], "path": ["api","admin","groups"] }
+          }
+        },
+        {
+          "name": "Get Group",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/groups/{{groupId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","groups","{{groupId}}"] }
+          }
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated desc\",\n  \"permissions\": [\"admin:read\", \"group:read\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/admin/groups/{{groupId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","groups","{{groupId}}"] }
+          }
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/groups/{{groupId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","groups","{{groupId}}"] }
+          }
+        }
+      ]
+    },
+		{
+			"name": "🏷️ Categories",
+			"item": [
+				{
+					"name": "Get All Categories (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories?includeInactive=false&level=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							],
+							"query": [
+								{
+									"key": "includeInactive",
+									"value": "false",
+									"description": "Include inactive categories"
+								},
+								{
+									"key": "level",
+									"value": "0",
+									"description": "Filter by category level"
+								},
+								{
+									"key": "parentId",
+									"value": "null",
+									"description": "Filter by parent category ID",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Root Category (Protected)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.category) {",
+									"        pm.environment.set('rootCategoryId', responseJson.data.category._id);",
+									"        console.log('Root category ID saved:', responseJson.data.category._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Electronics\",\n  \"slug\": \"electronics\",\n  \"description\": \"Electronic devices and accessories\",\n  \"image\": \"https://example.com/electronics.jpg\",\n  \"isActive\": true,\n  \"order\": 1,\n  \"seo\": {\n    \"metaTitle\": \"Electronics Category\",\n    \"metaDescription\": \"Browse our collection of electronic devices\",\n    \"keywords\": [\"electronics\", \"devices\", \"technology\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Sub Category (Protected)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.category) {",
+									"        pm.environment.set('subCategoryId', responseJson.data.category._id);",
+									"        console.log('Sub category ID saved:', responseJson.data.category._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Smartphones\",\n  \"slug\": \"smartphones\",\n  \"description\": \"Mobile phones and accessories\",\n  \"parentCategory\": \"{{rootCategoryId}}\",\n  \"image\": \"https://example.com/smartphones.jpg\",\n  \"isActive\": true,\n  \"order\": 1,\n  \"seo\": {\n    \"metaTitle\": \"Smartphones Category\",\n    \"metaDescription\": \"Browse our collection of smartphones\",\n    \"keywords\": [\"smartphones\", \"mobile\", \"phones\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Category by ID (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{rootCategoryId}}?includeProducts=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{rootCategoryId}}"
+							],
+							"query": [
+								{
+									"key": "includeProducts",
+									"value": "true",
+									"description": "Include products in this category"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Category (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Electronics Updated\",\n  \"description\": \"Updated description for electronic devices and accessories\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{rootCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{rootCategoryId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Category (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{subCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{subCategoryId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏪 Subcategories",
+			"item": [
+				{
+					"name": "Get All Subcategories (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/subcategories?categoryId={{rootCategoryId}}&includeInactive=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"subcategories"
+							],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "{{rootCategoryId}}",
+									"description": "Filter by category ID"
+								},
+								{
+									"key": "includeInactive",
+									"value": "false",
+									"description": "Include inactive subcategories"
+								},
+								{
+									"key": "parentId",
+									"value": "null",
+									"description": "Filter by parent subcategory ID",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Subcategory (Protected)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.subCategory) {",
+									"        pm.environment.set('subcategoryId', responseJson.data.subCategory._id);",
+									"        console.log('Subcategory ID saved:', responseJson.data.subCategory._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"iPhone\",\n  \"slug\": \"iphone\",\n  \"description\": \"Apple iPhone series\",\n  \"category\": \"{{subCategoryId}}\",\n  \"image\": \"https://example.com/iphone.jpg\",\n  \"isActive\": true,\n  \"order\": 1,\n  \"seo\": {\n    \"metaTitle\": \"iPhone Series\",\n    \"metaDescription\": \"Browse iPhone models\",\n    \"keywords\": [\"iphone\", \"apple\", \"smartphone\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/subcategories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"subcategories"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Subcategory by ID (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/subcategories/{{subcategoryId}}?includeProducts=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"subcategories",
+								"{{subcategoryId}}"
+							],
+							"query": [
+								{
+									"key": "includeProducts",
+									"value": "true",
+									"description": "Include products in this subcategory"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Subcategory (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"iPhone Updated\",\n  \"description\": \"Updated Apple iPhone series description\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/subcategories/{{subcategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"subcategories",
+								"{{subcategoryId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Subcategory (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/subcategories/{{subcategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"subcategories",
+								"{{subcategoryId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Products",
+			"item": [
+				{
+					"name": "Get All Products (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products?page=1&limit=10&category={{subCategoryId}}&status=active&isVisible=true&minPrice=100&maxPrice=2000&sortBy=basePrice&sortOrder=asc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "category",
+									"value": "{{subCategoryId}}",
+									"description": "Filter by category ID"
+								},
+								{
+									"key": "subCategory",
+									"value": "{{subcategoryId}}",
+									"description": "Filter by subcategory ID",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "active",
+									"description": "Filter by status"
+								},
+								{
+									"key": "isVisible",
+									"value": "true",
+									"description": "Filter by visibility"
+								},
+								{
+									"key": "isFeatured",
+									"value": "true",
+									"description": "Filter featured products",
+									"disabled": true
+								},
+								{
+									"key": "minPrice",
+									"value": "100",
+									"description": "Minimum price filter"
+								},
+								{
+									"key": "maxPrice",
+									"value": "2000",
+									"description": "Maximum price filter"
+								},
+								{
+									"key": "search",
+									"value": "iPhone",
+									"description": "Search in name, description, tags",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "smartphone,apple",
+									"description": "Comma-separated tags",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "basePrice",
+									"description": "Sort field"
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc",
+									"description": "asc or desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Product (Protected)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.product) {",
+									"        pm.environment.set('productId', responseJson.data.product._id);",
+									"        console.log('Product ID saved:', responseJson.data.product._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"iPhone 15 Pro Max\",\n  \"slug\": \"iphone-15-pro-max\",\n  \"description\": \"The most advanced iPhone with the largest display and best camera system. Features include A17 Pro chip, titanium design, and professional camera capabilities.\",\n  \"shortDescription\": \"Premium smartphone with 6.7-inch display and advanced features\",\n  \"category\": \"{{subCategoryId}}\",\n  \"subCategory\": \"{{subcategoryId}}\",\n  \"basePrice\": 1199,\n  \"comparePrice\": 1299,\n  \"cost\": 800,\n  \"sku\": \"IPH15PROMAX001\",\n  \"quantity\": 100,\n  \"images\": [\n    {\n      \"url\": \"https://example.com/iphone15promax1.jpg\",\n      \"alt\": \"iPhone 15 Pro Max Front\",\n      \"isPrimary\": true,\n      \"order\": 0\n    },\n    {\n      \"url\": \"https://example.com/iphone15promax2.jpg\",\n      \"alt\": \"iPhone 15 Pro Max Back\",\n      \"isPrimary\": false,\n      \"order\": 1\n    }\n  ],\n  \"specifications\": [\n    {\n      \"name\": \"Display Size\",\n      \"value\": \"6.7\",\n      \"unit\": \"inches\"\n    },\n    {\n      \"name\": \"Storage\",\n      \"value\": \"256\",\n      \"unit\": \"GB\"\n    },\n    {\n      \"name\": \"RAM\",\n      \"value\": \"8\",\n      \"unit\": \"GB\"\n    },\n    {\n      \"name\": \"Camera\",\n      \"value\": \"48\",\n      \"unit\": \"MP\"\n    }\n  ],\n  \"tags\": [\"smartphone\", \"apple\", \"iphone\", \"pro\", \"max\"],\n  \"status\": \"active\",\n  \"isVisible\": true,\n  \"isFeatured\": true,\n  \"weight\": 221,\n  \"dimensions\": {\n    \"length\": 160.9,\n    \"width\": 77.8,\n    \"height\": 7.8\n  },\n  \"seo\": {\n    \"metaTitle\": \"iPhone 15 Pro Max - Premium Smartphone\",\n    \"metaDescription\": \"Buy iPhone 15 Pro Max with advanced features and best camera system.\",\n    \"keywords\": [\"iphone 15 pro max\", \"apple smartphone\", \"premium phone\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Product by ID (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{productId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Product (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"iPhone 15 Pro Max - Updated\",\n  \"description\": \"Updated description with latest features and improvements\",\n  \"basePrice\": 1149,\n  \"quantity\": 150,\n  \"isFeatured\": true,\n  \"tags\": [\"smartphone\", \"apple\", \"iphone\", \"pro\", \"max\", \"updated\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{productId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Product (Protected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{productId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Products (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/products?search=iPhone&tags=apple,smartphone&page=1&limit=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "iPhone",
+									"description": "Search term"
+								},
+								{
+									"key": "tags",
+									"value": "apple,smartphone",
+									"description": "Filter by tags"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Testing Workflows",
+			"item": [
+				{
+					"name": "Complete Setup Flow",
+					"item": [
+						{
+							"name": "1. Register User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"email\": \"test.user@defencecart.com\",\n  \"password\": \"TestPassword123!\",\n  \"mobile\": \"+1234567890\",\n  \"companyName\": \"Defence Solutions Ltd\",\n  \"companyType\": \"government\",\n  \"roles\": [\"admin\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/users/signup",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"signup"
+									]
+								}
+							}
+						},
+						{
+							"name": "2. Login User",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const responseJson = pm.response.json();",
+											"    if (responseJson.data && responseJson.data.tokens) {",
+											"        pm.environment.set('accessToken', responseJson.data.tokens.accessToken);",
+											"        pm.environment.set('refreshToken', responseJson.data.tokens.refreshToken);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"test.user@defencecart.com\",\n  \"password\": \"TestPassword123!\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/users/login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"login"
+									]
+								}
+							}
+						},
+						{
+							"name": "3. Create Root Category",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const responseJson = pm.response.json();",
+											"    if (responseJson.data && responseJson.data.category) {",
+											"        pm.environment.set('testRootCategoryId', responseJson.data.category._id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Defence Equipment\",\n  \"slug\": \"defence-equipment\",\n  \"description\": \"Military and defence equipment category\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/categories",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"categories"
+									]
+								}
+							}
+						},
+						{
+							"name": "4. Create Sub Category",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const responseJson = pm.response.json();",
+											"    if (responseJson.data && responseJson.data.category) {",
+											"        pm.environment.set('testSubCategoryId', responseJson.data.category._id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Communication Systems\",\n  \"slug\": \"communication-systems\",\n  \"description\": \"Military communication and radio systems\",\n  \"parentCategory\": \"{{testRootCategoryId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/categories",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"categories"
+									]
+								}
+							}
+						},
+						{
+							"name": "5. Create Subcategory",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const responseJson = pm.response.json();",
+											"    if (responseJson.data && responseJson.data.subCategory) {",
+											"        pm.environment.set('testSubcategoryId', responseJson.data.subCategory._id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Radio Equipment\",\n  \"slug\": \"radio-equipment\",\n  \"description\": \"Military radio and communication devices\",\n  \"category\": \"{{testSubCategoryId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/subcategories",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"subcategories"
+									]
+								}
+							}
+						},
+						{
+							"name": "6. Create Product",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Military Grade Radio Transceiver\",\n  \"slug\": \"military-radio-transceiver\",\n  \"description\": \"High-frequency military grade radio transceiver with encryption capabilities. Designed for reliable communication in extreme conditions.\",\n  \"shortDescription\": \"Military grade radio with encryption\",\n  \"category\": \"{{testSubCategoryId}}\",\n  \"subCategory\": \"{{testSubcategoryId}}\",\n  \"basePrice\": 2500,\n  \"comparePrice\": 3000,\n  \"cost\": 1800,\n  \"sku\": \"MIL-RADIO-001\",\n  \"quantity\": 50,\n  \"specifications\": [\n    {\n      \"name\": \"Frequency Range\",\n      \"value\": \"30-512\",\n      \"unit\": \"MHz\"\n    },\n    {\n      \"name\": \"Power Output\",\n      \"value\": \"50\",\n      \"unit\": \"Watts\"\n    },\n    {\n      \"name\": \"Battery Life\",\n      \"value\": \"24\",\n      \"unit\": \"hours\"\n    }\n  ],\n  \"tags\": [\"military\", \"radio\", \"communication\", \"encryption\"],\n  \"status\": \"active\",\n  \"isVisible\": true,\n  \"isFeatured\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/products",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"products"
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "🛒 Shopping Cart",
+			"item": [
+				{
+					"name": "Get User Cart",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Item to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"add\",\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Cart Item Quantity",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"update\",\n  \"itemId\": \"ITEM_ID_HERE\",\n  \"quantity\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				},
+				{
+					"name": "Remove Item from Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"remove\",\n  \"itemId\": \"ITEM_ID_HERE\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				},
+				{
+					"name": "Remove All Items from Seller",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"remove\",\n  \"sellerId\": \"SELLER_ID_HERE\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"clear\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Orders & Marketplace",
+			"item": [
+				{
+					"name": "Create Order from Cart",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.order) {",
+									"        pm.environment.set('orderId', responseJson.data.order._id);",
+									"        console.log('Order ID saved:', responseJson.data.order._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shippingAddress\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"street\": \"123 Main Street\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"country\": \"United States\",\n    \"zipCode\": \"10001\",\n    \"phone\": \"+1234567890\"\n  },\n  \"paymentMethod\": \"cash_on_delivery\",\n  \"customerNotes\": \"Please handle with care\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Orders (as Buyer)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders?role=buyer&page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "buyer",
+									"description": "Get orders as buyer"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filter by order status",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Orders for My Products (as Seller)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders?role=seller&page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "seller",
+									"description": "Get orders as seller"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filter by order status",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Order Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Order Status (Seller)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"confirmed\",\n  \"trackingNumber\": \"TRK123456789\",\n  \"carrier\": \"FedEx\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Message to Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Order is being prepared for shipment. Expected delivery in 3-5 business days.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏪 Seller Dashboard",
+			"item": [
+				{
+					"name": "Get Seller Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/seller/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"seller",
+								"dashboard"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Seller Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"businessDescription\": \"Updated business description for defence technology solutions\",\n  \"businessAddress\": {\n    \"street\": \"456 Business Ave\",\n    \"city\": \"Washington\",\n    \"state\": \"DC\",\n    \"country\": \"United States\",\n    \"zipCode\": \"20001\"\n  },\n  \"bankDetails\": {\n    \"accountHolderName\": \"Tech Solutions Inc\",\n    \"accountNumber\": \"1234567890\",\n    \"bankName\": \"Bank of America\",\n    \"routingNumber\": \"021000021\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/seller/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"seller",
+								"dashboard"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Products (Seller)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/seller/products?page=1&limit=10&status=active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"seller",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "active",
+									"description": "Filter by product status"
+								},
+								{
+									"key": "category",
+									"value": "{{rootCategoryId}}",
+									"description": "Filter by category",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "military",
+									"description": "Search products",
+									"disabled": true
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
