@@ -7,7 +7,9 @@ import { Validator, ValidationSchemas } from "@/utils/validation";
 interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
+  roles: string[];
+  isVerified: boolean;
+  type: 'access' | 'refresh';
   iat?: number;
   exp?: number;
 }
@@ -29,7 +31,8 @@ function verifyToken(request: NextRequest): JWTPayload | null {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JWTPayload;
     
     // Only allow admin users to access dashboard
-    if (decoded.role !== 'admin') return null;
+    // Check if user has admin role in the roles array
+    if (!decoded.roles || !decoded.roles.includes('admin')) return null;
     
     return decoded;
   } catch {

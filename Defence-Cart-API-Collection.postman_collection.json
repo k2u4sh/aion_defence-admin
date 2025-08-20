@@ -2,10 +2,478 @@
 	"info": {
 		"_postman_id": "defence-cart-api-collection",
 		"name": "Defence Cart API Collection",
-		"description": "Complete API collection for Defence Cart e-commerce platform with JWT authentication, categories, subcategories, products, and user management.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"description": "Complete API collection for Defence Cart e-commerce platform with JWT authentication, categories, subcategories, products, user management, and CMS functionality.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "defence-cart-cms"
 	},
 		"item": [
+			{
+				"name": "📝 CMS Management",
+				"description": "Content Management System APIs for managing website content, sections, and settings. This collection includes endpoints for managing all CMS sections: Hero, Header, Features, Customize, Who Can Join, Subscription Plans, Footer, SEO Settings, and General Settings. Each section can be fetched, updated, and managed independently. The CMS also supports media upload functionality and bulk operations.",
+				"item": [
+					{
+						"name": "📚 CMS Documentation",
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "https://github.com/your-repo/cms-documentation",
+								"host": ["github.com"],
+								"path": ["your-repo", "cms-documentation"]
+							}
+						},
+						"description": "📖 **CMS Overview**\n\n**Available Sections:**\n• **Hero Section**: Main landing page content with title, subtitle, description, CTA, and images\n• **Header**: Navigation menu, logo, company name, contact info, and auth buttons\n• **Features**: Highlighted features with icons, titles, and descriptions\n• **Customize**: Product customization section with video thumbnail\n• **Who Can Join**: Business categories (OEMs, MSMEs, Startups)\n• **Subscription Plans**: Pricing tiers and features\n• **Footer**: Company info, links, social media, and legal pages\n• **SEO Settings**: Meta tags, Open Graph, and search optimization\n• **General Settings**: Site-wide settings, colors, fonts, and maintenance mode\n\n**Key Features:**\n• JWT authentication required for all operations\n• Support for bulk operations and maintenance mode\n• Media file management with tags and descriptions\n• Real-time preview and live editing\n• Version control and audit trails\n\n**Authentication:**\nAll CMS endpoints require a valid JWT access token in the Authorization header:\n`Authorization: Bearer {{accessToken}}`\n\n**Common Actions:**\n• `GET /api/cms?section={section}` - Fetch section content\n• `POST /api/cms` - Update section content (action: upsert)\n• `GET /api/cms/dashboard` - Get CMS overview and statistics\n• `POST /api/cms/upload` - Upload media files\n• `DELETE /api/cms/upload/{fileId}` - Delete media files"
+					},
+					{
+						"name": "CMS Dashboard",
+						"request": {
+							"method": "GET",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/dashboard",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "dashboard"]
+							}
+						},
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function () {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has success property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('success');",
+										"});",
+										"",
+										"pm.test('Response has data property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('data');",
+										"});",
+										"",
+										"if (pm.response.code === 200) {",
+										"    const responseJson = pm.response.json();",
+										"    console.log('CMS Dashboard Response:', responseJson);",
+										"}"
+									]
+								}
+							}
+						]
+					},
+					{
+						"name": "Get CMS Section",
+						"request": {
+							"method": "GET",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"url": {
+								"raw": "{{baseUrl}}/api/cms?section=hero",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"],
+								"query": [
+									{ "key": "section", "value": "hero" }
+								]
+							}
+						},
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function () {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has success property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('success');",
+										"});",
+										"",
+										"pm.test('Response has data property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('data');",
+										"});",
+										"",
+										"pm.test('Section data is present', function () {",
+										"    const responseJson = pm.response.json();",
+										"    if (responseJson.success && responseJson.data && responseJson.data.data) {",
+										"        pm.expect(responseJson.data.data).to.have.property('isActive');",
+										"    }",
+										"});",
+										"",
+										"if (pm.response.code === 200) {",
+										"    const responseJson = pm.response.json();",
+										"    console.log('CMS Section Response:', responseJson);",
+										"}"
+									]
+								}
+							}
+						]
+					},
+					{
+						"name": "Update Hero Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"hero\",\n  \"data\": {\n    \"title\": \"INDIA'S DEFENCE MARKETPLACE\",\n    \"subtitle\": \"STRATEGIC • SECURE • SEAMLESS\",\n    \"description\": \"We connect OEMs, MSMEs, and component suppliers with verified buyers, enabling seamless sourcing, customized bidding, regulatory support, and enterprise SaaS integration — all under one digital roof.\",\n    \"ctaText\": \"LEARN MORE\",\n    \"backgroundImage\": \"/images/hero-background.jpg\",\n    \"heroImage\": \"/images/fighter-jet.jpg\",\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						},
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function () {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has success property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('success');",
+										"});",
+										"",
+										"pm.test('Hero section updated successfully', function () {",
+										"    const responseJson = pm.response.json();",
+										"    if (responseJson.success) {",
+										"        pm.expect(responseJson.message).to.include('hero');",
+										"    }",
+										"});",
+										"",
+										"if (pm.response.code === 200) {",
+										"    const responseJson = pm.response.json();",
+										"    console.log('Hero Section Update Response:', responseJson);",
+										"}"
+									]
+								}
+							}
+						]
+					},
+					{
+						"name": "Update Header Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"header\",\n  \"data\": {\n    \"logo\": \"/images/defence-cart-logo.png\",\n    \"companyName\": \"DEFENCE CART\",\n    \"navigationItems\": [\n      {\n        \"label\": \"HOME\",\n        \"href\": \"#home\",\n        \"isActive\": true\n      },\n      {\n        \"label\": \"ABOUT US\",\n        \"href\": \"#about\",\n        \"isActive\": true\n      },\n      {\n        \"label\": \"PRODUCTS\",\n        \"href\": \"#products\",\n        \"isActive\": true\n      },\n      {\n        \"label\": \"SERVICES\",\n        \"href\": \"#services\",\n        \"isActive\": true\n      },\n      {\n        \"label\": \"SUBSCRIPTIONS\",\n        \"href\": \"#subscriptions\",\n        \"isActive\": true\n      }\n    ],\n    \"contactInfo\": {\n      \"phone\": \"8888 444 555\",\n      \"email\": \"CONTACT US\"\n    },\n    \"authButtons\": {\n      \"loginText\": \"LOGIN\",\n      \"registerText\": \"REGISTER NOW\"\n    },\n    \"searchPlaceholder\": \"Search\",\n    \"bidNowText\": \"BID NOW\",\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						},
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function () {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has success property', function () {",
+										"    const responseJson = pm.response.json();",
+										"    pm.expect(responseJson).to.have.property('success');",
+										"});",
+										"",
+										"pm.test('Header section updated successfully', function () {",
+										"    const responseJson = pm.response.json();",
+										"    if (responseJson.success) {",
+										"        pm.expect(responseJson.message).to.include('header');",
+										"    }",
+										"});",
+										"",
+										"pm.test('Navigation items are present', function () {",
+										"    const responseJson = pm.response.json();",
+										"    if (responseJson.success && responseJson.data && responseJson.data.data) {",
+										"        pm.expect(responseJson.data.data.navigationItems).to.be.an('array');",
+										"        pm.expect(responseJson.data.data.navigationItems.length).to.be.greaterThan(0);",
+										"    }",
+										"});",
+										"",
+										"if (pm.response.code === 200) {",
+										"    const responseJson = pm.response.json();",
+										"    console.log('Header Section Update Response:', responseJson);",
+										"}"
+									]
+								}
+							}
+						]
+					},
+					{
+						"name": "Update Features Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"features\",\n  \"data\": {\n    \"sectionTitle\": \"WHY DEFENCE CART?\",\n    \"features\": [\n      {\n        \"icon\": \"🔒\",\n        \"title\": \"Secure Platform\",\n        \"description\": \"Enterprise-grade security with encryption and compliance\",\n        \"isActive\": true\n      },\n      {\n        \"icon\": \"📊\",\n        \"title\": \"Real-time Analytics\",\n        \"description\": \"Get insights with comprehensive reporting and dashboards\",\n        \"isActive\": true\n      },\n      {\n        \"icon\": \"🔗\",\n        \"title\": \"Easy Integration\",\n        \"description\": \"Connect with your existing tools and workflows\",\n        \"isActive\": true\n      }\n    ],\n    \"backgroundImage\": \"/images/why-defence-cart-bg.jpg\",\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update Customize Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"customize\",\n  \"data\": {\n    \"sectionTitle\": \"Can't find a product as per requirement?\",\n    \"sectionSubtitle\": \"CUSTOMIZE & ADD YOUR REQUIREMENTS\",\n    \"sideText\": \"CUSTOMIZE\",\n    \"description\": \"Tell us your specific requirements and we'll help you find or create the perfect solution.\",\n    \"videoThumbnail\": \"/images/video.png\",\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update SEO Settings",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"seo\",\n  \"data\": {\n    \"title\": \"Defence Cart - India's First Defence Procurement Platform\",\n    \"description\": \"Strategic, secure, and seamless defence procurement platform connecting OEMs, MSMEs, and suppliers with verified buyers.\",\n    \"keywords\": \"defence procurement, military supplies, defence marketplace, strategic procurement\",\n    \"ogImage\": \"/images/og-image.jpg\",\n    \"favicon\": \"/favicon.ico\",\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update General Settings",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"settings\",\n  \"data\": {\n    \"siteName\": \"Defence Cart\",\n    \"maintenanceMode\": false,\n    \"maintenanceMessage\": \"We are currently under maintenance. Please check back soon.\",\n    \"colors\": {\n      \"primary\": \"#DCB13A\",\n      \"secondary\": \"#95A059\",\n      \"accent\": \"#E2E2E2\",\n      \"background\": \"#000000\",\n      \"border\": \"#313131\"\n    },\n    \"fonts\": {\n      \"primary\": \"Roboto\",\n      \"secondary\": \"Roboto Condensed\"\n    },\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update Who Can Join Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"who-can-join\",\n  \"data\": {\n    \"title\": \"WHO CAN JOIN?\",\n    \"subtitle\": \"Join our platform and grow your business\",\n    \"categories\": [\n      {\n        \"title\": \"OEMs\",\n        \"description\": \"Original Equipment Manufacturers\",\n        \"icon\": \"🏭\",\n        \"isActive\": true\n      },\n      {\n        \"title\": \"MSMEs\",\n        \"description\": \"Micro, Small and Medium Enterprises\",\n        \"icon\": \"🏢\",\n        \"isActive\": true\n      },\n      {\n        \"title\": \"Startups\",\n        \"description\": \"Innovative defence startups\",\n        \"icon\": \"🚀\",\n        \"isActive\": true\n      }\n    ],\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update Subscription Plans",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"subscription-plans\",\n  \"data\": {\n    \"title\": \"Choose Your Plan\",\n    \"subtitle\": \"Select the perfect plan for your business needs\",\n    \"plans\": [\n      {\n        \"name\": \"Basic\",\n        \"price\": 99,\n        \"period\": \"monthly\",\n        \"features\": [\"Basic listing\", \"Email support\", \"5 products\"],\n        \"isActive\": true\n      },\n      {\n        \"name\": \"Professional\",\n        \"price\": 299,\n        \"period\": \"monthly\",\n        \"features\": [\"Advanced listing\", \"Priority support\", \"Unlimited products\"],\n        \"isActive\": true\n      },\n      {\n        \"name\": \"Enterprise\",\n        \"price\": 999,\n        \"period\": \"monthly\",\n        \"features\": [\"Custom solutions\", \"Dedicated support\", \"API access\"],\n        \"isActive\": true\n      }\n    ],\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Update Footer Section",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"upsert\",\n  \"section\": \"footer\",\n  \"data\": {\n    \"companyInfo\": {\n      \"name\": \"Defence Cart\",\n      \"description\": \"India's First Defence Procurement Platform\",\n      \"address\": \"123 Defence Street, New Delhi, India\",\n      \"phone\": \"+91 8888 444 555\",\n      \"email\": \"info@defencecart.com\"\n    },\n    \"quickLinks\": [\n      {\n        \"label\": \"About Us\",\n        \"href\": \"/about\"\n      },\n      {\n        \"label\": \"Products\",\n        \"href\": \"/products\"\n      },\n      {\n        \"label\": \"Services\",\n        \"href\": \"/services\"\n      },\n      {\n        \"label\": \"Contact\",\n        \"href\": \"/contact\"\n      }\n    ],\n    \"socialLinks\": [\n      {\n        \"platform\": \"LinkedIn\",\n        \"url\": \"https://linkedin.com/company/defencecart\",\n        \"icon\": \"linkedin\"\n      },\n      {\n        \"platform\": \"Twitter\",\n        \"url\": \"https://twitter.com/defencecart\",\n        \"icon\": \"twitter\"\n      }\n    ],\n    \"copyright\": \"DefenceCart 2025 | All Rights Reserved\",\n    \"legalLinks\": [\n      {\n        \"label\": \"Privacy Policy\",\n        \"href\": \"/privacy\"\n      },\n      {\n        \"label\": \"Terms of Service\",\n        \"href\": \"/terms\"\n      }\n    ],\n    \"isActive\": true\n  }\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms"]
+							}
+						}
+					},
+					{
+						"name": "Toggle Maintenance Mode",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"toggle-maintenance\",\n  \"maintenanceMode\": true\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/dashboard",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "dashboard"]
+							}
+						}
+					},
+					{
+						"name": "Upload Media File",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+							],
+							"body": {
+								"mode": "formdata",
+								"formdata": [
+									{
+										"key": "file",
+										"type": "file",
+										"src": []
+									},
+									{
+										"key": "tags",
+										"value": "hero,background,defence",
+										"description": "Comma-separated tags"
+									},
+									{
+										"key": "description",
+										"value": "Hero section background image",
+										"description": "File description"
+									}
+								]
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/upload",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "upload"]
+							}
+						}
+					},
+					{
+						"name": "Get Media Files",
+						"request": {
+							"method": "GET",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/upload",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "upload"]
+							}
+						}
+					},
+					{
+						"name": "Delete Media File",
+						"request": {
+							"method": "DELETE",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/upload/{{fileId}}",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "upload", "{{fileId}}"]
+							}
+						}
+					},
+					{
+						"name": "Get All CMS Sections Status",
+						"request": {
+							"method": "GET",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/dashboard",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "dashboard"]
+							}
+						}
+					},
+					{
+						"name": "Bulk Update CMS Sections",
+						"request": {
+							"method": "POST",
+							"header": [
+								{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"action\": \"bulk-update\",\n  \"sections\": [\n    {\n      \"section\": \"hero\",\n      \"data\": {\n        \"isActive\": true\n      }\n    },\n    {\n      \"section\": \"header\",\n      \"data\": {\n        \"isActive\": true\n      }\n    },\n    {\n      \"section\": \"features\",\n      \"data\": {\n        \"isActive\": true\n      }\n    }\n  ]\n}"
+							},
+							"url": {
+								"raw": "{{baseUrl}}/api/cms/dashboard",
+								"host": ["{{baseUrl}}"],
+								"path": ["api", "cms", "dashboard"]
+							}
+						}
+					}
+				]
+			},
 			{
 				"name": "🏢 Company Registration",
 				"item": [
@@ -325,6 +793,28 @@
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
             "url": { "raw": "{{baseUrl}}/api/admin/{{adminId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","{{adminId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 User Management",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/users?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","users"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"20"}] }
+          }
+        },
+        {
+          "name": "Toggle User Active",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": \"{{userId}}\",\n  \"isActive\": false\n}" },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api","users"] }
           }
         }
       ]

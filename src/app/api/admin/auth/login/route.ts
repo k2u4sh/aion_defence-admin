@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       isVerified: true
     });
 
-    return ApiResponseHandler.success({
+    const res = ApiResponseHandler.success({
       admin: {
         id: admin._id,
         firstName: admin.firstName,
@@ -40,6 +40,17 @@ export async function POST(request: NextRequest) {
       },
       tokens
     }, "Login successful");
+
+    // Set session cookie for middleware-based routing
+    // This is a lightweight marker; sensitive auth should still use Authorization headers
+    res.cookies.set('auth_session', String(admin._id), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+    return res;
   } catch (err) {
     console.error("Admin login error:", err);
     return ApiResponseHandler.error("Internal Server Error", 500);

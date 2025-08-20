@@ -2,8 +2,16 @@ import { NextRequest } from "next/server";
 import { ApiResponseHandler } from "@/utils/apiResponse";
 
 export async function POST(_request: NextRequest) {
-  // If you're using httpOnly cookies for tokens, clear them here.
-  return ApiResponseHandler.success(null, "Logged out");
+  const res = ApiResponseHandler.success(null, "Logged out");
+  // Clear session cookie used by middleware routing
+  res.cookies.set('auth_session', '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 0,
+  });
+  return res;
 }
 
 

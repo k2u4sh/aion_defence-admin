@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
 
     const update: Record<string, unknown> = {};
-    const { firstName, lastName, role, permissions, groups, isActive } = body || {};
+    const { firstName, lastName, role, permissions, groups, isActive, password } = body || {};
     if (firstName !== undefined) update.firstName = firstName;
     if (lastName !== undefined) update.lastName = lastName;
     if (role !== undefined) update.role = role;
@@ -46,6 +46,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         return ApiResponseHandler.error("One or more groups not found", 400);
       }
       update.groups = found.map(g => g._id);
+    }
+
+    // If password change is requested, use document save to trigger hashing
+    if (typeof password === 'string' && password.length > 0) {
+      const doc = await Admin.findById(params.id).select('+password');
+      if (!doc) return ApiResponseHandler.notFound("Admin not found");
+      // Apply other updates on the document
+      Object.assign(doc, update);
+      doc.password = password;
+      await doc.save();
+      const populated = await Admin.findById(params.id).populate("groups", "name permissions");
+      return ApiResponseHandler.success(populated, "Admin updated");
     }
 
     const admin = await Admin.findByIdAndUpdate(params.id, update, { new: true }).populate("groups", "name permissions");
