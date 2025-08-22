@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SignInForm from '@/components/auth/SignInForm';
 import GridShape from '@/components/common/GridShape';
-import ThemeTogglerTwo from '@/components/common/ThemeTogglerTwo';
+
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -11,9 +11,11 @@ export default function Root() {
   const router = useRouter();
   useEffect(() => {
     try {
-      const hasSession = typeof document !== 'undefined' && document.cookie.includes('auth_session=');
-      if (hasSession) {
-        router.replace('/dashboard');
+      if (typeof window !== 'undefined') {
+        const hasSession = document.cookie.includes('auth_session=');
+        if (hasSession) {
+          router.replace('/dashboard');
+        }
       }
     } catch {}
   }, [router]);
@@ -39,9 +41,7 @@ export default function Root() {
             </div>
           </div>
         </div>
-        <div className="fixed bottom-6 right-6 z-50 hidden sm:block">
-          <ThemeTogglerTwo />
-        </div>
+
       </div>
     </div>
   );

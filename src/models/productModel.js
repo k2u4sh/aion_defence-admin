@@ -516,9 +516,9 @@ productSchema.statics.searchProducts = function(searchTerm, filters = {}) {
 };
 
 // Clear any existing model to avoid conflicts
-if (mongoose.models.Product) {
-  delete mongoose.models.Product;
+if (mongoose.models.Products) {
+  delete mongoose.models.Products;
 }
 
-const Product = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Products", productSchema);
 export default Product;

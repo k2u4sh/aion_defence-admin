@@ -166,5 +166,5 @@ tagSchema.statics.cleanUnusedTags = function() {
   });
 };
 
-const Tag = mongoose.models.Tag || mongoose.model("Tag", tagSchema);
+const Tag = mongoose.models.Tags || mongoose.model("Tags", tagSchema);
 export default Tag;

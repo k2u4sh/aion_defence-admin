@@ -3,8 +3,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { 
-  PencilIcon, 
-  TrashBinIcon, 
   EyeIcon, 
   PlusIcon, 
   GridIcon, 

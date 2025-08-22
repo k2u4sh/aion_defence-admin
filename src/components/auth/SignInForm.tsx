@@ -3,7 +3,7 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,19 +39,23 @@ export default function SignInForm() {
       // Parse tokens from response and persist for client-side API calls
       const tokens = data?.data?.tokens as { accessToken?: string; refreshToken?: string } | undefined;
       const admin = data?.data?.admin as { id?: string } | undefined;
-      if (tokens?.accessToken) {
-        try { localStorage.setItem('accessToken', tokens.accessToken); } catch {}
-      }
-      if (tokens?.refreshToken) {
-        try { localStorage.setItem('refreshToken', tokens.refreshToken); } catch {}
-      }
+      
+      // Only access browser APIs on the client side
+      if (typeof window !== 'undefined') {
+        if (tokens?.accessToken) {
+          try { localStorage.setItem('accessToken', tokens.accessToken); } catch {}
+        }
+        if (tokens?.refreshToken) {
+          try { localStorage.setItem('refreshToken', tokens.refreshToken); } catch {}
+        }
 
-      // Set a non-HTTPOnly session cookie so middleware recognizes the session
-      // Note: purely for routing; sensitive ops should still use Authorization headers
-      if (admin?.id) {
-        const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-        const maxAge = 60 * 60 * 24 * 7; // 7 days
-        document.cookie = `auth_session=${encodeURIComponent(admin.id)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+        // Set a non-HTTPOnly session cookie so middleware recognizes the session
+        // Note: purely for routing; sensitive ops should still use Authorization headers
+        if (admin?.id) {
+          const isSecure = window.location.protocol === 'https:';
+          const maxAge = 60 * 60 * 24 * 7; // 7 days
+          document.cookie = `auth_session=${encodeURIComponent(admin.id)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+        }
       }
 
       const next = search.get('next') || '/dashboard';
@@ -104,12 +108,12 @@ export default function SignInForm() {
                     Password <span className="text-error-500">*</span>{" "}
                   </Label>
                   <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e)=>setPassword(e.target.value)}
-                    />
+                                          <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e)=>setPassword(e.target.value)}
+                      />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
@@ -138,7 +142,7 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button disabled={loading} className="w-full" size="sm">
+                  <Button type="submit" disabled={loading} className="w-full" size="sm">
                     {loading ? 'Signing in...' : 'Sign in'}
                   </Button>
                 </div>

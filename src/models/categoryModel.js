@@ -37,7 +37,7 @@ const categorySchema = new mongoose.Schema({
   },
   parentCategory: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Category",
+    ref: "Categories",
     default: null
   },
   level: {
@@ -58,7 +58,7 @@ const categorySchema = new mongoose.Schema({
   },
   featuredProducts: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Product"
+    ref: "Products"
   }],
   tags: [{
     type: String,
@@ -154,5 +154,10 @@ categorySchema.methods.hasChildren = function() {
   return this.constructor.countDocuments({ parentCategory: this._id, isActive: true });
 };
 
-const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
+// Clear any existing model to avoid conflicts
+if (mongoose.models.Categories) {
+  delete mongoose.models.Categories;
+}
+
+const Category = mongoose.model("Categories", categorySchema);
 export default Category;

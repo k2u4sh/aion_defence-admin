@@ -6,8 +6,9 @@ interface ModalProps {
   onClose: () => void;
   className?: string;
   children: React.ReactNode;
-  showCloseButton?: boolean; // New prop to control close button visibility
-  isFullscreen?: boolean; // Default to false for backwards compatibility
+  showCloseButton?: boolean;
+  isFullscreen?: boolean;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,8 +16,9 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   children,
   className,
-  showCloseButton = true, // Default to true for backwards compatibility
+  showCloseButton = true,
   isFullscreen = false,
+  size = "md",
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -50,12 +52,33 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
+  const getSizeClasses = () => {
+    switch (size) {
+      case "sm":
+        return "max-w-sm";
+      case "md":
+        return "max-w-md";
+      case "lg":
+        return "max-w-lg";
+      case "xl":
+        return "max-w-xl";
+      case "2xl":
+        return "max-w-2xl";
+      case "3xl":
+        return "max-w-3xl";
+      case "4xl":
+        return "max-w-4xl";
+      default:
+        return "max-w-md";
+    }
+  };
+
   const contentClasses = isFullscreen
     ? "w-full h-full"
-    : "relative w-full rounded-3xl bg-white  dark:bg-gray-900";
+    : `relative w-full rounded-3xl bg-white dark:bg-gray-900 ${getSizeClasses()}`;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto modal z-99999">
+    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto modal z-99999 p-4">
       {!isFullscreen && (
         <div
           className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"
@@ -64,7 +87,7 @@ export const Modal: React.FC<ModalProps> = ({
       )}
       <div
         ref={modalRef}
-        className={`${contentClasses}  ${className}`}
+        className={`${contentClasses} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {showCloseButton && (

@@ -29,6 +29,8 @@ import CheckLineIcon from "./check-line.svg";
 import CloseLineIcon from "./close-line.svg";
 import ChevronDownIcon from "./chevron-down.svg";
 import ChevronUpIcon from "./chevron-up.svg";
+import ChevronLeftIcon from "./chevron-left.svg";
+import ChevronRightIcon from "./chevron-right.svg";
 import PaperPlaneIcon from "./paper-plane.svg";
 import LockIcon from "./lock.svg";
 import EnvelopeIcon from "./envelope.svg";
@@ -39,7 +41,6 @@ import EyeCloseIcon from "./eye-close.svg";
 import EyeSlashIcon from "./eye-slash.svg";
 import TimeIcon from "./time.svg";
 import CopyIcon from "./copy.svg";
-import ChevronLeftIcon from "./chevron-left.svg";
 import UserCircleIcon from "./user-circle.svg";
 import TaskIcon from "./task-icon.svg";
 import ListIcon from "./list.svg";
@@ -54,6 +55,7 @@ import HorizontaLDots from "./horizontal-dots.svg";
 import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
 import BellIcon from "./bell.svg";
+import ClockIcon from "./time.svg";
 
 // Add missing icons for CMS
 import SettingsIcon from "./settings.svg";
@@ -64,6 +66,16 @@ import UploadIcon from "./upload.svg";
 import SaveIcon from "./save.svg";
 import XIcon from "./x.svg";
 import CheckIcon from "./check.svg";
+
+// Add missing icons for product management
+import SearchIcon from "./search.svg";
+import FilterIcon from "./filter.svg";
+import EditIcon from "./edit.svg";
+import TrashIcon from "./trash.svg";
+import AlertTriangleIcon from "./alert-triangle.svg";
+
+// Add missing icons for user management
+import PhoneIcon from "./phone.svg";
 
 export {
   DownloadIcon,
@@ -99,6 +111,8 @@ export {
   CloseLineIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   PaperPlaneIcon,
   EnvelopeIcon,
   LockIcon,
@@ -109,7 +123,6 @@ export {
   EyeSlashIcon,
   TimeIcon,
   CopyIcon,
-  ChevronLeftIcon,
   UserCircleIcon,
   ListIcon,
   TableIcon,
@@ -130,5 +143,15 @@ export {
   UploadIcon,
   SaveIcon,
   XIcon,
-  CheckIcon
+  CheckIcon,
+  // Add product management icons
+  SearchIcon,
+  FilterIcon,
+  EditIcon,
+  TrashIcon,
+  AlertTriangleIcon,
+  // Add user management icons
+  PhoneIcon,
+  // Add clock icon alias
+  ClockIcon
 };

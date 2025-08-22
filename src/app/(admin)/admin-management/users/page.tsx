@@ -1,8 +1,8 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
-import { PencilIcon, TrashBinIcon, EyeIcon, PlusIcon, GridIcon, ListIcon } from "@/icons";
+import { PencilIcon, TrashBinIcon, EyeIcon, PlusIcon, GridIcon } from "@/icons";
 
 interface User {
   _id: string;

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
-import { CheckIcon, XIcon } from "@/icons";
+import { CheckIcon } from "@/icons";
 
 interface UserFormData {
   firstName: string;

@@ -10,6 +10,7 @@ const adminSchema = new mongoose.Schema({
   lastName: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true, select: false },
+  profilePhoto: { type: String, default: null }, // URL to profile photo
 
   // Role can be: super_admin, admin, moderator, support, etc.
   role: {

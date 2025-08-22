@@ -1,5 +1,5 @@
 {
-  "name": "free-nextjs-admin-dashboard",
+  "name": "Aion Defence Admin Panel",
   "version": "2.0.2",
   "private": true,
   "scripts": {
@@ -13,7 +13,8 @@
     "migrate:down": "node scripts/migrate-cli.js down",
     "migrate:validate": "node scripts/migrate-cli.js validate",
     "migrate:create": "node scripts/migrate-cli.js create",
-    "migrate:models": "node scripts/migrate-cli.js models"
+    "migrate:models": "node scripts/migrate-cli.js models",
+    "seed:orders": "node scripts/seed-orders.js"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
@@ -27,6 +28,7 @@
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/postcss": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^7.0.1",
     "aos": "^2.3.4",
     "apexcharts": "^4.3.0",
     "autoprefixer": "^10.4.20",
@@ -39,6 +41,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
     "next": "^15.4.6",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.5",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
     "react-dnd": "^16.0.1",

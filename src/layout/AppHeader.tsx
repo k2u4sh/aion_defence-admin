@@ -1,7 +1,7 @@
 "use client";
-import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
+import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import { useSidebar } from "@/context/SidebarContext";
 import { LayoutIcon } from "@/icons";
 import Image from "next/image";
@@ -134,6 +134,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onShowCMS }) => {
               <LayoutIcon width={16} height={16} />
               <span>CMS</span>
             </button>
+            
+            {/* Theme Toggle for Desktop */}
+            <ThemeToggleButton />
             
             <form>
               <div className="relative">

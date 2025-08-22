@@ -1,9 +1,0 @@
-{
-  "/api/cms/dashboard/route": "app/api/cms/dashboard/route.js",
-  "/api/cms/route": "app/api/cms/route.js",
-  "/(admin)/admin-management/cms/features/page": "app/(admin)/admin-management/cms/features/page.js",
-  "/(admin)/admin-management/cms/header/page": "app/(admin)/admin-management/cms/header/page.js",
-  "/(admin)/admin-management/cms/upload/page": "app/(admin)/admin-management/cms/upload/page.js",
-  "/(admin)/admin-management/cms/page": "app/(admin)/admin-management/cms/page.js",
-  "/(admin)/admin-management/cms/hero/page": "app/(admin)/admin-management/cms/hero/page.js"
-}

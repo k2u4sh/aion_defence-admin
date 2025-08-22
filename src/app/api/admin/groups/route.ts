@@ -1,61 +1,137 @@
-import { connectDB } from "@/utils/db";
-import { NextRequest } from "next/server";
-import { ApiResponseHandler } from "@/utils/apiResponse";
-import { requirePermission } from "@/utils/adminAccess";
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase as connectDB } from "@/lib/db";
+import AdminGroup from "@/models/adminGroupModel";
+import { requireAdminAuth } from "@/utils/adminAccess";
 
-const getAdminGroupModel = async () => (await import("@/models/adminGroupModel")).default;
-
-// GET /api/admin/groups - list with pagination
+// GET /api/admin/groups - Get all admin groups with pagination and filters
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "group:read");
-    if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
+    // Check admin authentication
+    const authCheck = await requireAdminAuth(request);
+    if (!authCheck.success) {
+      return NextResponse.json(
+        { success: false, message: authCheck.message || "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
-    const AdminGroup = await getAdminGroupModel();
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const search = searchParams.get("search") || "";
+    const isActive = searchParams.get("isActive") || "";
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    if (isActive !== "") {
+      query.isActive = isActive === "true";
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+    // Calculate skip value
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = {};
-    const search = searchParams.get("search");
-    if (search) filter.name = { $regex: search, $options: "i" };
+    // Get groups
+    const groups = await AdminGroup.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    const [items, total] = await Promise.all([
-      AdminGroup.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-      AdminGroup.countDocuments(filter)
-    ]);
+    // Get total count
+    const total = await AdminGroup.countDocuments(query);
 
-    return ApiResponseHandler.paginated(items, page, limit, total, "Groups fetched successfully");
-  } catch (err) {
-    console.error("List groups error:", err);
-    return ApiResponseHandler.error("Internal Server Error", 500);
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        groups,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage,
+          hasPrevPage
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch groups" },
+      { status: 500 }
+    );
   }
 }
 
-// POST /api/admin/groups - create
+// POST /api/admin/groups - Create a new admin group
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "group:write");
-    if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
-    await connectDB();
-    const AdminGroup = await getAdminGroupModel();
-    const body = await request.json();
-
-    const { name, description = "", permissions = [] } = body || {};
-    if (!name || typeof name !== "string") {
-      return ApiResponseHandler.error("'name' is required", 400);
+    // Check admin authentication
+    const authCheck = await requireAdminAuth(request);
+    if (!authCheck.success) {
+      return NextResponse.json(
+        { success: false, message: authCheck.message || "Authentication required" },
+        { status: 401 }
+      );
     }
 
-    const exists = await AdminGroup.findOne({ name: name.trim() });
-    if (exists) return ApiResponseHandler.error("Group name already exists", 409);
+    await connectDB();
 
-    const group = await AdminGroup.create({ name: name.trim(), description, permissions });
-    return ApiResponseHandler.success(group, "Group created", 201);
-  } catch (err) {
-    console.error("Create group error:", err);
-    return ApiResponseHandler.error("Internal Server Error", 500);
+    const body = await request.json();
+    const adminId = authCheck.admin._id;
+
+    // Create group with admin as creator
+    const groupData = {
+      ...body,
+      createdBy: adminId,
+      updatedBy: adminId
+    };
+
+    const group = new AdminGroup(groupData);
+    await group.save();
+
+    return NextResponse.json({
+      success: true,
+      message: "Group created successfully",
+      data: group
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error("Error creating group:", error);
+    
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { success: false, message: "Group with this name already exists" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to create group" },
+      { status: 500 }
+    );
   }
 }
 

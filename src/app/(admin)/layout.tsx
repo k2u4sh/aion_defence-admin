@@ -1,6 +1,8 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { SidebarProvider } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import CMSSidebar from "@/layout/CMSSidebar";
@@ -12,6 +14,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <SidebarProvider>
+      <ThemeProvider>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </ThemeProvider>
+    </SidebarProvider>
+  );
+}
+
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const [showCMSSidebar, setShowCMSSidebar] = useState(false);
 

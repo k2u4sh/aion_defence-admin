@@ -1,6 +1,7 @@
 import ComponentCard from "@/components/common/ComponentCard";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateTime } from "@/utils/formatters";
 import connectToDatabase from "@/lib/db";
 const getUserModel = async () => (await import("@/models/userModel")).default;
 import { Metadata } from "next";
@@ -57,7 +58,7 @@ export default async function UsersPage() {
                         <TableRow key={u.id}>
                           <TableCell className="px-5 py-4 text-start">{u.name}</TableCell>
                           <TableCell className="px-5 py-4 text-start">{u.email}</TableCell>
-                          <TableCell className="px-5 py-4 text-start">{new Date(u.createdAt).toLocaleString()}</TableCell>
+                          <TableCell className="px-5 py-4 text-start">{formatDateTime(u.createdAt)}</TableCell>
                         </TableRow>
                       ))
                     )}

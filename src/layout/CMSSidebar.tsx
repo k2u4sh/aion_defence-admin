@@ -12,7 +12,10 @@ import {
   UploadIcon,
   EyeIcon,
   PencilIcon,
-  PlusIcon
+  PlusIcon,
+  BoxIconLine,
+  UserIcon,
+  DollarLineIcon
 } from "@/icons";
 
 interface CMSSidebarProps {
@@ -32,17 +35,158 @@ interface CMSNavItem {
 const cmsNavItems: CMSNavItem[] = [
   {
     id: 'overview',
-    name: 'CMS Overview',
-    description: 'Dashboard and overview',
+    name: 'Dashboard Overview',
+    description: 'Main dashboard and metrics',
     icon: <LayoutIcon width={20} height={20} />,
     href: '/admin-management/cms'
+  },
+  {
+    id: 'orders',
+    name: 'Orders Management',
+    description: 'Manage customer orders',
+    icon: <BoxIconLine width={20} height={20} />,
+    href: '/admin-management/cms/orders',
+    children: [
+      {
+        id: 'all-orders',
+        name: 'All Orders',
+        description: 'View and manage orders',
+        icon: <BoxIconLine width={16} height={16} />,
+        href: '/admin-management/cms/orders'
+      },
+      {
+        id: 'order-status',
+        name: 'Order Status',
+        description: 'Track order progress',
+        icon: <EyeIcon width={16} height={16} />,
+        href: '/admin-management/cms/orders/status'
+      },
+      {
+        id: 'returns',
+        name: 'Returns & Refunds',
+        description: 'Handle returns',
+        icon: <SettingsIcon width={16} height={16} />,
+        href: '/admin-management/cms/orders/returns'
+      }
+    ]
+  },
+  {
+    id: 'products',
+    name: 'Products Management',
+    description: 'Manage product catalog',
+    icon: <GridIcon width={20} height={20} />,
+    href: '/admin-management/cms/products',
+    children: [
+      {
+        id: 'all-products',
+        name: 'All Products',
+        description: 'View and manage products',
+        icon: <GridIcon width={16} height={16} />,
+        href: '/admin-management/cms/products'
+      },
+      {
+        id: 'add-product',
+        name: 'Add Product',
+        description: 'Create new product',
+        icon: <PlusIcon width={16} height={16} />,
+        href: '/admin-management/cms/products/add'
+      },
+      {
+        id: 'categories',
+        name: 'Categories',
+        description: 'Manage product categories',
+        icon: <FileIcon width={16} height={16} />,
+        href: '/admin-management/cms/products/categories'
+      },
+      {
+        id: 'inventory',
+        name: 'Inventory',
+        description: 'Stock management',
+        icon: <BoxIconLine width={16} height={16} />,
+        href: '/admin-management/cms/products/inventory'
+      }
+    ]
+  },
+  {
+    id: 'users',
+    name: 'Users Management',
+    description: 'Manage user accounts',
+    icon: <UserIcon width={20} height={20} />,
+    href: '/admin-management/cms/users',
+    children: [
+      {
+        id: 'all-users',
+        name: 'All Users',
+        description: 'View and manage users',
+        icon: <UserIcon width={16} height={16} />,
+        href: '/admin-management/cms/users'
+      },
+      {
+        id: 'add-user',
+        name: 'Add User',
+        description: 'Create new user account',
+        icon: <PlusIcon width={16} height={16} />,
+        href: '/admin-management/cms/users/add'
+      },
+      {
+        id: 'user-roles',
+        name: 'User Roles',
+        description: 'Manage permissions',
+        icon: <SettingsIcon width={16} height={16} />,
+        href: '/admin-management/cms/users/roles'
+      },
+      {
+        id: 'onboarding',
+        name: 'User Onboarding',
+        description: 'New user setup',
+        icon: <EyeIcon width={16} height={16} />,
+        href: '/admin-management/cms/users/onboarding'
+      }
+    ]
+  },
+  {
+    id: 'payments',
+    name: 'Payments & Finance',
+    description: 'Manage payments and revenue',
+    icon: <DollarLineIcon width={20} height={20} />,
+    href: '/admin-management/cms/payments',
+    children: [
+      {
+        id: 'all-payments',
+        name: 'All Payments',
+        description: 'View payment transactions',
+        icon: <DollarLineIcon width={16} height={16} />,
+        href: '/admin-management/cms/payments'
+      },
+      {
+        id: 'payment-methods',
+        name: 'Payment Methods',
+        description: 'Configure payment options',
+        icon: <SettingsIcon width={16} height={16} />,
+        href: '/admin-management/cms/payments/methods'
+      },
+      {
+        id: 'refunds',
+        name: 'Refunds',
+        description: 'Process refunds',
+        icon: <SettingsIcon width={16} height={16} />,
+        href: '/admin-management/cms/payments/refunds'
+      },
+      {
+        id: 'financial-reports',
+        name: 'Financial Reports',
+        description: 'Revenue analytics',
+        icon: <GridIcon width={16} height={16} />,
+        href: '/admin-management/cms/payments/reports'
+      }
+    ]
   },
   {
     id: 'content',
     name: 'Content Sections',
     description: 'Manage website content',
     icon: <TextIcon width={20} height={20} />,
-    href: '/admin-management/cms',
+    href: '/admin-management/cms/content',
     children: [
       {
         id: 'hero',
@@ -107,7 +251,7 @@ const cmsNavItems: CMSNavItem[] = [
     name: 'CMS Settings',
     description: 'Configuration',
     icon: <SettingsIcon width={20} height={20} />,
-    href: '/admin-management/cms',
+    href: '/admin-management/cms/settings',
     children: [
       {
         id: 'seo',

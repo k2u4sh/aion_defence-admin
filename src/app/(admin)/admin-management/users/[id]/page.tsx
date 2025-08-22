@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
-import { PencilIcon, CheckIcon, XIcon, EyeIcon, EyeSlashIcon } from "@/icons";
+// Icons removed as they are not used
 
 interface User {
   _id: string;
