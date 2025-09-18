@@ -12,7 +12,7 @@ const ensureModelsRegistered = () => {
 // GET /api/admin/users/[id] - Get a specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     ensureModelsRegistered();
@@ -27,7 +27,7 @@ export async function GET(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get user with company information
     const user = await User.findById(id)
@@ -59,7 +59,7 @@ export async function GET(
 // PUT /api/admin/users/[id] - Update a specific user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     ensureModelsRegistered();
@@ -74,7 +74,7 @@ export async function PUT(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const adminId = authCheck.admin?._id;
 
@@ -127,7 +127,7 @@ export async function PUT(
 // DELETE /api/admin/users/[id] - Delete a specific user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     ensureModelsRegistered();
@@ -142,7 +142,7 @@ export async function DELETE(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if user exists
     const existingUser = await User.findById(id);

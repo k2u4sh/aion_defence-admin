@@ -12,7 +12,7 @@ const ensureModelsRegistered = () => {
 // GET /api/admin/users/[id]/company - Get company information for a user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     ensureModelsRegistered();
@@ -27,7 +27,7 @@ export async function GET(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get user with company information
     const user = await User.findById(id)
@@ -63,7 +63,7 @@ export async function GET(
 // PUT /api/admin/users/[id]/company - Update company information for a user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     ensureModelsRegistered();
@@ -78,7 +78,7 @@ export async function PUT(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const adminId = authCheck.admin?._id;
 
