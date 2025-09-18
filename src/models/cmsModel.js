@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Hero Section Schema
 const heroSectionSchema = new mongoose.Schema({
@@ -134,9 +134,17 @@ const customizeSectionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  subDescription: {
+    type: String,
+    required: true
+  },
   videoThumbnail: {
     type: String,
     default: "/images/video.png"
+  },
+  videoUrl: {
+    type: String,
+    default: "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
   },
   playButtonIcon: {
     type: String,
@@ -157,6 +165,10 @@ const whoCanJoinSchema = new mongoose.Schema({
     required: true,
     default: "WHO CAN JOIN?"
   },
+  sectionTitle2: {
+    type: String,
+    default: "CAN JOIN?"
+  },
   sectionSubtitle: {
     type: String,
     required: true,
@@ -170,6 +182,10 @@ const whoCanJoinSchema = new mongoose.Schema({
     category: { type: String, required: true },
     description: { type: String, required: true },
     isActive: { type: Boolean, default: true }
+  }],
+  whocanjointext: [{
+    text: { type: String, required: true },
+    image: { type: String, required: true }
   }],
   centerImage: {
     type: String,
@@ -305,6 +321,42 @@ const seoSettingsSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Marketplace Section Schema
+const marketplaceSectionSchema = new mongoose.Schema({
+  titleImage: {
+    type: String,
+    default: "/images/first.png"
+  },
+  description: {
+    type: String,
+    required: true,
+    default: "DefenceCart is India's first private, mission-ready defence procurement platform designed to simplify, secure, and scale procurement for defence manufacturers."
+  },
+  subDescription: {
+    type: String,
+    required: true,
+    default: "We connect OEMs, MSMEs, and component suppliers with verified buyers, enabling seamless sourcing, customized bidding, regulatory support, and enterprise SaaS integration all under one digital roof."
+  },
+  ctaText: {
+    type: String,
+    default: "LEARN MORE"
+  },
+  ctaIcon: {
+    type: String,
+    default: "/images/green-arrow.png"
+  },
+  mainImage: {
+    type: String,
+    default: "/images/marketplace.png"
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+}, {
+  timestamps: true
+});
+
 // General Settings Schema
 const generalSettingsSchema = new mongoose.Schema({
   siteName: {
@@ -348,8 +400,9 @@ const SubscriptionPlans = mongoose.models.SubscriptionPlans || mongoose.model('S
 const Footer = mongoose.models.Footer || mongoose.model('Footer', footerSchema);
 const SEOSettings = mongoose.models.SEOSettings || mongoose.model('SEOSettings', seoSettingsSchema);
 const GeneralSettings = mongoose.models.GeneralSettings || mongoose.model('GeneralSettings', generalSettingsSchema);
+const MarketplaceSection = mongoose.models.MarketplaceSection || mongoose.model('MarketplaceSection', marketplaceSectionSchema);
 
-module.exports = {
+export {
   HeroSection,
   Header,
   FeaturesSection,
@@ -358,5 +411,6 @@ module.exports = {
   SubscriptionPlans,
   Footer,
   SEOSettings,
-  GeneralSettings
+  GeneralSettings,
+  MarketplaceSection
 };

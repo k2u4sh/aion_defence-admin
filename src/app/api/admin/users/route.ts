@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
 import User from "@/models/userModel";
+import Company from "@/models/companyModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
+
+const ensureModelsRegistered = () => {
+  User;
+  Company;
+};
 
 // GET /api/admin/users - Get all users with pagination and filters
 export async function GET(request: NextRequest) {
   try {
+    ensureModelsRegistered();
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -54,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (role) {
-      query.roles = role;
+      query.roles = { $in: [role] };
     }
 
     if (companyType) {
@@ -68,13 +75,16 @@ export async function GET(request: NextRequest) {
     // Calculate skip value
     const skip = (page - 1) * limit;
 
-    // Get users
+    // Get users with company information
     const users = await User.find(query)
       .select("-password")
+      .populate("company")
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean();
+
+    // Debug logs removed - company data is now working
 
     // Get total count
     const total = await User.countDocuments(query);
@@ -111,6 +121,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/users - Create a new user
 export async function POST(request: NextRequest) {
   try {
+    ensureModelsRegistered();
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -123,7 +134,11 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const adminId = authCheck.admin._id;
+    const adminId = authCheck.admin?._id;
+    if (!adminId) return NextResponse.json(
+      { success: false, message: "Admin not found" },
+      { status: 401 }
+    );
 
     // Create user with admin as creator
     const userData = {

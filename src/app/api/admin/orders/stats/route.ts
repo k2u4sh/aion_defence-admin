@@ -1,17 +1,33 @@
-import { connectDB } from "@/utils/db";
-import { NextRequest } from "next/server";
-import { ApiResponseHandler } from "@/utils/apiResponse";
-import { requirePermission } from "@/utils/adminAccess";
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase as connectDB } from "@/lib/db";
+import Order from "@/models/orderModel";
+import User from "@/models/userModel";
+import Product from "@/models/productModel";
+import { requireAdminAuth } from "@/utils/adminAccess";
 
-const getOrderModel = async () => (await import("@/models/orderModel")).default;
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  User;
+  Product;
+  Order;
+};
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, "admin:read");
-    if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
+    // Check admin authentication
+    const authCheck = await requireAdminAuth(request);
+    if (!authCheck.success) {
+      return NextResponse.json(
+        { success: false, message: authCheck.message || "Authentication required" },
+        { status: 401 }
+      );
+    }
 
     await connectDB();
-    const Order = await getOrderModel();
 
     // Get date range for stats (default to last 30 days)
     const { searchParams } = new URL(request.url);
@@ -23,7 +39,8 @@ export async function GET(request: NextRequest) {
     const stats = await Order.aggregate([
       {
         $match: {
-          orderDate: { $gte: startDate }
+          createdAt: { $gte: startDate },
+          deletedAt: null
         }
       },
       {
@@ -32,10 +49,10 @@ export async function GET(request: NextRequest) {
           totalOrders: { $sum: 1 },
           totalRevenue: { $sum: "$totalAmount" },
           orderStatusCounts: {
-            $push: "$orderStatus"
+            $push: "$status"
           },
           paymentStatusCounts: {
-            $push: "$paymentStatus"
+            $push: "$payment.status"
           }
         }
       }
@@ -45,12 +62,13 @@ export async function GET(request: NextRequest) {
     const orderStatusStats = await Order.aggregate([
       {
         $match: {
-          orderDate: { $gte: startDate }
+          createdAt: { $gte: startDate },
+          deletedAt: null
         }
       },
       {
         $group: {
-          _id: "$orderStatus",
+          _id: "$status",
           count: { $sum: 1 }
         }
       }
@@ -60,12 +78,13 @@ export async function GET(request: NextRequest) {
     const paymentStatusStats = await Order.aggregate([
       {
         $match: {
-          orderDate: { $gte: startDate }
+          createdAt: { $gte: startDate },
+          deletedAt: null
         }
       },
       {
         $group: {
-          _id: "$paymentStatus",
+          _id: "$payment.status",
           count: { $sum: 1 }
         }
       }
@@ -92,7 +111,7 @@ export async function GET(request: NextRequest) {
       deliveredOrders: orderStatusCounts.delivered || 0,
       cancelledOrders: orderStatusCounts.cancelled || 0,
       pendingPayments: paymentStatusCounts.pending || 0,
-      paidOrders: paymentStatusCounts.paid || 0,
+      paidOrders: paymentStatusCounts.completed || 0,
       failedPayments: paymentStatusCounts.failed || 0,
       refundedPayments: paymentStatusCounts.refunded || 0,
       period: {
@@ -102,10 +121,17 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    return ApiResponseHandler.success("Order statistics fetched successfully", result);
+    return NextResponse.json({
+      success: true,
+      message: "Order statistics fetched successfully",
+      data: result
+    });
 
   } catch (err) {
     console.error("Error fetching order statistics:", err);
-    return ApiResponseHandler.serverError("Failed to fetch order statistics");
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch order statistics" },
+      { status: 500 }
+    );
   }
 }

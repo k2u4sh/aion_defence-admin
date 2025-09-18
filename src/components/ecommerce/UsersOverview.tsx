@@ -160,7 +160,7 @@ export const UsersOverview = () => {
       case 'pending': return 'warning';
       case 'inactive': return 'info';
       case 'blocked': return 'error';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 

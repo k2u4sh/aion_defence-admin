@@ -18,7 +18,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Dashboard() {
-  const session = await cookies().get('auth_session');
+  const cookieStore = await cookies();
+  const session = cookieStore.get('auth_session');
   if (!session?.value) {
     redirect('/');
   }

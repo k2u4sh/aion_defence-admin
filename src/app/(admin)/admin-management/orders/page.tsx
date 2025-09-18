@@ -3,32 +3,114 @@ import React, { useState, useEffect } from "react";
 import { OrderManagementTable } from "@/components/orders/OrderManagementTable";
 import { OrderStats } from "@/components/orders/OrderStats";
 import { OrderFilters } from "@/components/orders/OrderFilters";
+import UnifiedPagination from "@/components/common/UnifiedPagination";
 
 export interface Order {
   _id: string;
   orderNumber: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  orderDate: string;
+  orderType: 'product' | 'subscription' | 'mixed';
+  buyer: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    companyName?: string;
+  };
+  items: Array<{
+    _id: string;
+    product?: {
+      _id: string;
+      name: string;
+      sku: string;
+      images: Array<{ url: string; isPrimary: boolean }>;
+    };
+    seller?: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      companyName?: string;
+    };
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    variant?: string;
+    productSnapshot?: {
+      name: string;
+      sku: string;
+      image: string;
+    };
+    itemType: 'product' | 'subscription';
+    subscriptionPlan?: {
+      name: string;
+      billingCycle: string;
+      duration: number;
+    };
+  }>;
+  subtotal: number;
+  taxAmount: number;
+  shippingCost: number;
+  discount: number;
   totalAmount: number;
-  orderStatus: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
-  paymentMethod: string;
   shippingAddress: {
     street: string;
     city: string;
     state: string;
-    zipCode: string;
     country: string;
+    zipCode: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
   };
-  items: Array<{
-    productId: string;
-    productName: string;
-    quantity: number;
-    price: number;
+  billingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  };
+  payment: {
+    method: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'cash_on_delivery' | 'manual' | 'subscription' | 'razorpay' | 'stripe' | 'upi';
+    status: 'pending' | 'completed' | 'failed' | 'refunded' | 'partially_refunded';
+    transactionId?: string;
+    paidAt?: string;
+    refundedAt?: string;
+    refundAmount?: number;
+  };
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'returned';
+  trackingNumber?: string;
+  carrier?: string;
+  confirmedAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  cancelledAt?: string;
+  customerNotes?: string;
+  adminNotes?: string;
+  messages: Array<{
+    _id: string;
+    from: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+    };
+    message: string;
+    timestamp: string;
+    isFromBuyer: boolean;
+    isFromSeller: boolean;
+    isFromAdmin: boolean;
   }>;
-  notes?: string;
+  subscription?: {
+    planName: string;
+    billingCycle: string;
+    startDate: string;
+    endDate: string;
+    autoRenew: boolean;
+    subscriptionId?: string;
+  };
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -49,6 +131,10 @@ export default function OrdersPage() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [filters, setFilters] = useState<OrderFilters>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const itemsPerPage = 20;
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -65,7 +151,7 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
     fetchStats();
-  }, []);
+  }, [currentPage, filters]);
 
   useEffect(() => {
     applyFilters();
@@ -74,13 +160,29 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/orders', {
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.orderStatus && { status: filters.orderStatus }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.dateRange?.start && { startDate: filters.dateRange.start }),
+        ...(filters.dateRange?.end && { endDate: filters.dateRange.end }),
+        ...(filters.minAmount !== undefined && { minAmount: filters.minAmount.toString() }),
+        ...(filters.maxAmount !== undefined && { maxAmount: filters.maxAmount.toString() })
+      });
+      
+      const response = await fetch(`/api/admin/orders?${params}`, {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.data || []);
+        setOrders(data.data?.orders || []);
+        setTotalPages(data.data?.pagination?.totalPages || 1);
+        setTotalOrders(data.data?.pagination?.total || 0);
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -105,34 +207,34 @@ export default function OrdersPage() {
   };
 
   const applyFilters = () => {
-    let filtered = [...orders];
+    let filtered = [...(orders || [])];
 
     if (filters.orderStatus) {
-      filtered = filtered.filter(order => order.orderStatus === filters.orderStatus);
+      filtered = filtered.filter(order => order.status === filters.orderStatus);
     }
 
     if (filters.paymentStatus) {
-      filtered = filtered.filter(order => order.paymentStatus === filters.paymentStatus);
+      filtered = filtered.filter(order => order.payment.status === filters.paymentStatus);
     }
 
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(order => 
         order.orderNumber.toLowerCase().includes(searchTerm) ||
-        order.customerName.toLowerCase().includes(searchTerm) ||
-        order.customerEmail.toLowerCase().includes(searchTerm)
+        `${order.buyer.firstName} ${order.buyer.lastName}`.toLowerCase().includes(searchTerm) ||
+        order.buyer.email.toLowerCase().includes(searchTerm)
       );
     }
 
     if (filters.dateRange?.start) {
       filtered = filtered.filter(order => 
-        new Date(order.orderDate) >= new Date(filters.dateRange!.start)
+        new Date(order.createdAt) >= new Date(filters.dateRange!.start)
       );
     }
 
     if (filters.dateRange?.end) {
       filtered = filtered.filter(order => 
-        new Date(order.orderDate) <= new Date(filters.dateRange!.end)
+        new Date(order.createdAt) <= new Date(filters.dateRange!.end)
       );
     }
 
@@ -156,7 +258,7 @@ export default function OrdersPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          [statusType === 'order' ? 'orderStatus' : 'paymentStatus']: newStatus
+          [statusType === 'order' ? 'status' : 'payment']: statusType === 'order' ? newStatus : { status: newStatus }
         }),
       });
 
@@ -167,7 +269,7 @@ export default function OrdersPage() {
             order._id === orderId 
               ? { 
                   ...order, 
-                  [statusType === 'order' ? 'orderStatus' : 'paymentStatus']: newStatus,
+                  [statusType === 'order' ? 'status' : 'payment']: statusType === 'order' ? newStatus : { ...order.payment, status: newStatus },
                   updatedAt: new Date().toISOString()
                 }
               : order
@@ -184,6 +286,7 @@ export default function OrdersPage() {
 
   const handleFiltersChange = (newFilters: OrderFilters) => {
     setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   return (
@@ -213,6 +316,15 @@ export default function OrdersPage() {
         orders={filteredOrders}
         isLoading={isLoading}
         onStatusUpdate={handleStatusUpdate}
+      />
+
+      {/* Pagination */}
+      <UnifiedPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalOrders}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
       />
     </div>
   );

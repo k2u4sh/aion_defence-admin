@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { ApiResponseHandler } from "@/utils/apiResponse";
 
 interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -40,19 +41,7 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}) {
     
     // Check if limit exceeded
     if (requestData.count > maxRequests) {
-      return ApiResponseHandler.success({
-        message,
-        success: false,
-        retryAfter: Math.ceil((requestData.resetTime - now) / 1000)
-      }, { 
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': maxRequests.toString(),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': requestData.resetTime.toString(),
-          'Retry-After': Math.ceil((requestData.resetTime - now) / 1000).toString()
-        }
-      });
+      return ApiResponseHandler.error(message || 'Rate limit exceeded', 429);
     }
     
     return null; // No rate limit hit

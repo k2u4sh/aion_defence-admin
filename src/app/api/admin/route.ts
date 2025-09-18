@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
     
     // Date range filtering
     if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
+      filter.createdAt = {} as any;
+      if (startDate) (filter.createdAt as any).$gte = new Date(startDate);
+      if (endDate) (filter.createdAt as any).$lte = new Date(endDate);
     }
 
     const [items, total] = await Promise.all([

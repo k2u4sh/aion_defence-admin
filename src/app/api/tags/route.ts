@@ -97,20 +97,16 @@ export async function GET(request: NextRequest) {
     }
 
     return ApiResponseHandler.success({
-      message: "Tags fetched successfully",
-      success: true,
-      data: {
-        tags,
-        pagination: popular ? null : {
-          currentPage: page,
-          totalPages,
-          totalItems: total,
-          itemsPerPage: limit,
-          hasNextPage: page < totalPages,
-          hasPreviousPage: page > 1
-        }
+      tags,
+      pagination: popular ? null : {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
       }
-    }, 200);
+    }, "Tags fetched successfully");
 
   } catch (error) {
     console.error("Get tags error:", error);
@@ -183,22 +179,14 @@ async function createTag(request: NextRequest, user: JWTPayload) {
     ]);
 
     return ApiResponseHandler.success({
-      message: "Tag created successfully",
-      success: true,
-      data: {
-        tag: savedTag
-      }
-    }, 201);
+      tag: savedTag
+    }, "Tag created successfully", 201);
 
   } catch (error) {
     console.error("Create tag error:", error);
     
     if (error instanceof Error && error.name === 'ValidationError') {
-      return ApiResponseHandler.success({
-        message: "Validation error",
-        success: false,
-        details: error.message
-      }, 400);
+      return ApiResponseHandler.error("Validation error: " + error.message, 400);
     }
 
     return ApiResponseHandler.error("Internal Server Error", 500);

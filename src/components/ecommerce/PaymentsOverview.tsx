@@ -149,7 +149,7 @@ export const PaymentsOverview = () => {
       case 'failed': return 'error';
       case 'refunded': return 'info';
       case 'cancelled': return 'error';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 
@@ -325,7 +325,7 @@ export const PaymentsOverview = () => {
                       {payment.orderNumber}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">
-                      {new Date(payment.transactionDate).toLocaleDateString()}
+                      {new Date(payment.transactionDate).toISOString().split('T')[0]}
                     </div>
                   </div>
                 </td>

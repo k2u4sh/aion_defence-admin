@@ -35,13 +35,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password);
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password as string);
     if (!isCurrentPasswordValid) {
       return ApiResponseHandler.error("Current password is incorrect", 401);
     }
 
     // Check if new password is different from current password
-    const isNewPasswordSame = await bcrypt.compare(newPassword, admin.password);
+    const isNewPasswordSame = await bcrypt.compare(newPassword, admin.password as string);
     if (isNewPasswordSame) {
       return ApiResponseHandler.error("New password must be different from current password", 400);
     }

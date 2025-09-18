@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
 import Product from "@/models/productModel";
+import User from "@/models/userModel";
+import Category from "@/models/categoryModel";
+import Tag from "@/models/tagModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
+
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  User;
+  Category;
+  Tag;
+  Product;
+};
 
 // GET /api/admin/products - Get all products with pagination and filters
 export async function GET(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -23,6 +38,12 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
+    const subCategory = searchParams.get("subCategory") || "";
+    const seller = searchParams.get("seller") || "";
+    const minPrice = searchParams.get("minPrice") || "";
+    const maxPrice = searchParams.get("maxPrice") || "";
+    const stockFilter = searchParams.get("stockFilter") || "";
+    const featured = searchParams.get("featured") || "";
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
@@ -33,7 +54,8 @@ export async function GET(request: NextRequest) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { sku: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
+        { description: { $regex: search, $options: "i" } },
+        { shortDescription: { $regex: search, $options: "i" } }
       ];
     }
 
@@ -45,6 +67,41 @@ export async function GET(request: NextRequest) {
       query.category = category;
     }
 
+    if (subCategory) {
+      query.subCategory = subCategory;
+    }
+
+    if (seller) {
+      query.seller = seller;
+    }
+
+    if (minPrice) {
+      query.basePrice = { ...query.basePrice, $gte: parseFloat(minPrice) };
+    }
+
+    if (maxPrice) {
+      query.basePrice = { ...query.basePrice, $lte: parseFloat(maxPrice) };
+    }
+
+    if (stockFilter) {
+      switch (stockFilter) {
+        case 'out_of_stock':
+          query.quantity = { $lte: 0 };
+          break;
+        case 'low_stock':
+          query.$expr = { $lte: ["$quantity", "$lowStockThreshold"] };
+          query.quantity = { $gt: 0 };
+          break;
+        case 'in_stock':
+          query.$expr = { $gt: ["$quantity", "$lowStockThreshold"] };
+          break;
+      }
+    }
+
+    if (featured && featured !== "") {
+      query.isFeatured = featured === "true";
+    }
+
     // Build sort object
     const sort: any = {};
     sort[sortBy] = sortOrder === "desc" ? -1 : 1;
@@ -54,6 +111,11 @@ export async function GET(request: NextRequest) {
 
     // Get products with populated fields
     const products = await Product.find(query)
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .populate("tags", "name color")
+      .populate("seller", "firstName lastName companyName")
+      .populate("supplier", "firstName lastName companyName")
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -94,6 +156,9 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/products - Create a new product
 export async function POST(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -106,7 +171,11 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const adminId = authCheck.admin._id;
+    const adminId = authCheck.admin?._id;
+    if (!adminId) return NextResponse.json(
+      { success: false, message: "Admin not found" },
+      { status: 401 }
+    );
 
     // Create product with admin as creator
     const productData = {

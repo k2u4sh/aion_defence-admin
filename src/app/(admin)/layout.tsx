@@ -31,11 +31,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const mainContentMargin = isMobileOpen
     ? "ml-0"
     : isExpanded || isHovered
-    ? "lg:ml-[290px]"
-    : "lg:ml-[90px]";
+    ? "lg:ml-[280px] xl:ml-[290px]"
+    : "lg:ml-[70px] xl:ml-[90px]";
 
   return (
-    <div className="min-h-screen xl:flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Sidebar and Backdrop */}
       <AppSidebar />
       <Backdrop />
@@ -45,12 +45,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       
       {/* Main Content Area */}
       <div
-        className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
+        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin} flex flex-col min-h-screen`}
       >
         {/* Header */}
         <AppHeader onShowCMS={() => setShowCMSSidebar(true)} />
         {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
+        <div className="flex-1 p-3 sm:p-4 md:p-6 max-w-7xl mx-auto w-full">
+          {children}
+        </div>
       </div>
     </div>
   );

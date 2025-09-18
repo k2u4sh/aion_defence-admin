@@ -5,11 +5,12 @@ import { ApiResponseHandler } from "@/utils/apiResponse";
 const getAdminGroupModel = async () => (await import("@/models/adminGroupModel")).default;
 
 // GET /api/admin/groups/[id]
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     await connectDB();
     const AdminGroup = await getAdminGroupModel();
-    const group = await AdminGroup.findById(params.id);
+    const group = await AdminGroup.findById(resolvedParams.id);
     if (!group) return ApiResponseHandler.notFound("Group not found");
     return ApiResponseHandler.success(group, "Group fetched");
   } catch (err) {
@@ -19,8 +20,9 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 }
 
 // PUT /api/admin/groups/[id]
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     await connectDB();
     const AdminGroup = await getAdminGroupModel();
     const body = await request.json();
@@ -30,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (description !== undefined) update.description = description;
     if (Array.isArray(permissions)) update.permissions = permissions;
 
-    const group = await AdminGroup.findByIdAndUpdate(params.id, update, { new: true });
+    const group = await AdminGroup.findByIdAndUpdate(resolvedParams.id, update, { new: true });
     if (!group) return ApiResponseHandler.notFound("Group not found");
     return ApiResponseHandler.success(group, "Group updated");
   } catch (err) {
@@ -40,11 +42,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/admin/groups/[id]
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     await connectDB();
     const AdminGroup = await getAdminGroupModel();
-    const group = await AdminGroup.findByIdAndDelete(params.id);
+    const group = await AdminGroup.findByIdAndDelete(resolvedParams.id);
     if (!group) return ApiResponseHandler.notFound("Group not found");
     return ApiResponseHandler.success(null, "Group deleted");
   } catch (err) {

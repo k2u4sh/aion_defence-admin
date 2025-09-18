@@ -145,7 +145,7 @@ export const ProductsOverview = () => {
       case 'inactive': return 'warning';
       case 'draft': return 'info';
       case 'archived': return 'error';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 

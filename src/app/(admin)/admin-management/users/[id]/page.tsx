@@ -80,6 +80,9 @@ export default function UserDetailPage() {
   const [saving, setSaving] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState<'verify' | 'block' | 'activate' | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     loadUser();
@@ -203,6 +206,50 @@ export default function UserDetailPage() {
     }));
   };
 
+  const handleChangePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      setError(null);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/users/${userId}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ newPassword })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to change password');
+      }
+      
+      setShowPasswordModal(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className="p-4">Loading...</div>;
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
   if (!user) return <div className="p-4">User not found</div>;
@@ -225,12 +272,20 @@ export default function UserDetailPage() {
             Back to Users
           </Link>
           {!editing && (
-            <button
-              onClick={handleEdit}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Edit User
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleEdit}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Edit User
+              </button>
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Change Password
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -301,7 +356,7 @@ export default function UserDetailPage() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Last Login</span>
             <span className="text-xs text-gray-600">
-              {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+              {user.lastLogin ? new Date(user.lastLogin).toISOString().split('T')[0] : 'Never'}
             </span>
           </div>
         </div>
@@ -319,7 +374,7 @@ export default function UserDetailPage() {
                   <label className="block text-sm font-medium mb-2">First Name</label>
                   <input
                     type="text"
-                    value={editForm.firstName}
+                    value={editForm?.firstName || ''}
                     onChange={(e) => setEditForm(prev => ({ ...prev!, firstName: e.target.value }))}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                   />
@@ -328,7 +383,7 @@ export default function UserDetailPage() {
                   <label className="block text-sm font-medium mb-2">Last Name</label>
                   <input
                     type="text"
-                    value={editForm.lastName}
+                    value={editForm?.lastName || ''}
                     onChange={(e) => setEditForm(prev => ({ ...prev!, lastName: e.target.value }))}
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                   />
@@ -338,7 +393,7 @@ export default function UserDetailPage() {
                 <label className="block text-sm font-medium mb-2">Mobile</label>
                 <input
                   type="tel"
-                  value={editForm.mobile}
+                  value={editForm?.mobile || ''}
                   onChange={(e) => setEditForm(prev => ({ ...prev!, mobile: e.target.value }))}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -347,7 +402,7 @@ export default function UserDetailPage() {
                 <label className="block text-sm font-medium mb-2">Alternate Email</label>
                 <input
                   type="email"
-                  value={editForm.alternateEmail || ""}
+                  value={editForm?.alternateEmail || ""}
                   onChange={(e) => setEditForm(prev => ({ ...prev!, alternateEmail: e.target.value }))}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -355,7 +410,7 @@ export default function UserDetailPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Bio</label>
                 <textarea
-                  value={editForm.bio || ""}
+                  value={editForm?.bio || ""}
                   onChange={(e) => setEditForm(prev => ({ ...prev!, bio: e.target.value }))}
                   rows={3}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
@@ -397,7 +452,7 @@ export default function UserDetailPage() {
                 <label className="block text-sm font-medium mb-2">Company Name</label>
                 <input
                   type="text"
-                  value={editForm.companyName}
+                  value={editForm?.companyName || ''}
                   onChange={(e) => setEditForm(prev => ({ ...prev!, companyName: e.target.value }))}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -405,7 +460,7 @@ export default function UserDetailPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Company Type</label>
                 <select
-                  value={editForm.companyType}
+                  value={editForm?.companyType || ''}
                   onChange={(e) => setEditForm(prev => ({ ...prev!, companyType: e.target.value }))}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 >
@@ -440,7 +495,7 @@ export default function UserDetailPage() {
                 <label key={role.value} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={editForm.roles.includes(role.value)}
+                    checked={editForm?.roles.includes(role.value) || false}
                     onChange={() => handleRoleToggle(role.value)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -468,11 +523,11 @@ export default function UserDetailPage() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Created:</span>
-              <span className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</span>
+              <span className="font-medium">{new Date(user.createdAt).toISOString().split('T')[0]}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Last Updated:</span>
-              <span className="font-medium">{new Date(user.updatedAt).toLocaleDateString()}</span>
+              <span className="font-medium">{new Date(user.updatedAt).toISOString().split('T')[0]}</span>
             </div>
             {user.sellerProfile && (
               <>
@@ -536,6 +591,59 @@ export default function UserDetailPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? 'Updating...' : 'Confirm'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)}>
+        <div className="p-6">
+          <h3 className="text-lg font-medium mb-4">Change Password</h3>
+          {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter new password"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Confirm new password"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              onClick={() => {
+                setShowPasswordModal(false);
+                setNewPassword('');
+                setConfirmPassword('');
+                setError(null);
+              }}
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleChangePassword}
+              disabled={saving}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              {saving ? 'Changing...' : 'Change Password'}
             </button>
           </div>
         </div>

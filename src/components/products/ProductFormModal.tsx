@@ -18,6 +18,8 @@ interface Product {
   shortDescription?: string;
   category: string;
   subCategory?: string;
+  seller?: string;
+  supplier?: string;
   tags: string[];
   basePrice: number;
   comparePrice?: number;
@@ -65,12 +67,20 @@ interface Category {
   _id: string;
   name: string;
   level: number;
+  parentCategory?: string;
 }
 
 interface Tag {
   _id: string;
   name: string;
   color: string;
+}
+
+interface Seller {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  companyName?: string;
 }
 
 interface ProductFormModalProps {
@@ -89,12 +99,15 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [formData, setFormData] = useState<Partial<Product>>({
     name: "",
     description: "",
     shortDescription: "",
     category: "",
     subCategory: "",
+    seller: "",
+    supplier: "",
     tags: [],
     basePrice: 0,
     comparePrice: 0,
@@ -128,12 +141,69 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [newSpecification, setNewSpecification] = useState({ name: "", value: "", unit: "" });
   const [newImage, setNewImage] = useState({ url: "", alt: "", isPrimary: false });
 
+  const normalizeProduct = (p: any): Partial<Product> => {
+    const safeVal = <T,>(val: T | undefined, fallback: T) => (val === undefined || val === null ? fallback : val);
+    return {
+      _id: p._id,
+      name: safeVal(p.name, ""),
+      slug: p.slug,
+      description: safeVal(p.description, ""),
+      shortDescription: safeVal(p.shortDescription, ""),
+      category: typeof p.category === 'object' ? p.category?._id : p.category || null,
+      subCategory: typeof p.subCategory === 'object' ? p.subCategory?._id : p.subCategory || null,
+      seller: typeof p.seller === 'object' ? p.seller?._id : p.seller || null,
+      supplier: typeof p.supplier === 'object' ? p.supplier?._id : p.supplier || null,
+      tags: (p.tags || []).map((t: any) => (typeof t === 'object' ? t._id : t)),
+      basePrice: Number(safeVal(p.basePrice, 0)),
+      comparePrice: Number(safeVal(p.comparePrice, 0)),
+      cost: Number(safeVal(p.cost, 0)),
+      sku: safeVal(p.sku, ""),
+      barcode: safeVal(p.barcode, ""),
+      quantity: Number(safeVal(p.quantity, 0)),
+      lowStockThreshold: Number(safeVal(p.lowStockThreshold, 10)),
+      weight: Number(safeVal(p.weight, 0)),
+      weightUnit: safeVal(p.weightUnit, "kg"),
+      dimensions: {
+        length: Number(safeVal(p.dimensions?.length, 0)),
+        width: Number(safeVal(p.dimensions?.width, 0)),
+        height: Number(safeVal(p.dimensions?.height, 0)),
+      },
+      dimensionUnit: safeVal(p.dimensionUnit, "cm"),
+      status: safeVal(p.status, "draft"),
+      isVisible: Boolean(safeVal(p.isVisible, true)),
+      isFeatured: Boolean(safeVal(p.isFeatured, false)),
+      isDigital: Boolean(safeVal(p.isDigital, false)),
+      trackQuantity: Boolean(safeVal(p.trackQuantity, true)),
+      allowBackorder: Boolean(safeVal(p.allowBackorder, false)),
+      taxable: Boolean(safeVal(p.taxable, true)),
+      taxRate: Number(safeVal(p.taxRate, 0)),
+      images: (p.images || []).map((img: any, idx: number) => ({
+        url: img.url,
+        alt: img.alt || "",
+        isPrimary: Boolean(img.isPrimary),
+        order: Number(img.order ?? idx),
+      })),
+      specifications: (p.specifications || []).map((s: any) => ({
+        name: s.name,
+        value: s.value,
+        unit: s.unit || "",
+      })),
+      seo: {
+        metaTitle: p.seo?.metaTitle || p.seoTitle || "",
+        metaDescription: p.seo?.metaDescription || p.seoDescription || "",
+        keywords: p.seo?.keywords || [],
+        canonicalUrl: p.seo?.canonicalUrl || "",
+      },
+    };
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
       fetchTags();
+      fetchSellers();
       if (product) {
-        setFormData(product);
+        setFormData(normalizeProduct(product));
       } else {
         resetForm();
       }
@@ -145,10 +215,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const response = await fetch("/api/admin/categories?limit=100");
       const data = await response.json();
       if (data.success) {
-        setCategories(data.data.categories);
+        setCategories(data.data?.categories || []);
+      } else {
+        setCategories([]);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+      setCategories([]);
     }
   };
 
@@ -157,10 +230,28 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const response = await fetch("/api/admin/tags?limit=100");
       const data = await response.json();
       if (data.success) {
-        setTags(data.data.tags);
+        setTags(data.data?.tags || []);
+      } else {
+        setTags([]);
       }
     } catch (error) {
       console.error("Error fetching tags:", error);
+      setTags([]);
+    }
+  };
+
+  const fetchSellers = async () => {
+    try {
+      const response = await fetch("/api/admin/users?limit=100&role=seller");
+      const data = await response.json();
+      if (data.success) {
+        setSellers(data.data?.users || []);
+      } else {
+        setSellers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching sellers:", error);
+      setSellers([]);
     }
   };
 
@@ -171,6 +262,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       shortDescription: "",
       category: "",
       subCategory: "",
+      seller: "",
+      supplier: "",
       tags: [],
       basePrice: 0,
       comparePrice: 0,
@@ -213,7 +306,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setFormData(prev => ({
       ...prev,
       [parent]: {
-        ...prev[parent as keyof Product],
+        ...(prev[parent as keyof Product] as any || {}),
         [field]: value
       }
     }));
@@ -275,12 +368,50 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const url = product ? `/api/admin/products/${product._id}` : "/api/admin/products";
       const method = product ? "PUT" : "POST";
 
+      // Build clean payload without undefined/nulls
+      const payload: any = {
+        name: formData.name,
+        description: formData.description,
+        shortDescription: formData.shortDescription,
+        category: formData.category || null,
+        subCategory: formData.subCategory || null,
+        seller: formData.seller || null,
+        supplier: formData.supplier || null,
+        tags: formData.tags || [],
+        basePrice: formData.basePrice,
+        comparePrice: formData.comparePrice,
+        cost: formData.cost,
+        sku: formData.sku,
+        barcode: formData.barcode,
+        quantity: formData.quantity,
+        lowStockThreshold: formData.lowStockThreshold,
+        weight: formData.weight,
+        weightUnit: formData.weightUnit,
+        dimensions: formData.dimensions,
+        dimensionUnit: formData.dimensionUnit,
+        status: formData.status,
+        isVisible: formData.isVisible,
+        isFeatured: formData.isFeatured,
+        isDigital: formData.isDigital,
+        trackQuantity: formData.trackQuantity,
+        allowBackorder: formData.allowBackorder,
+        taxable: formData.taxable,
+        taxRate: formData.taxRate,
+        images: formData.images || [],
+        specifications: formData.specifications || [],
+        seo: formData.seo || { metaTitle: "", metaDescription: "", keywords: [], canonicalUrl: "" },
+      };
+
+      Object.keys(payload).forEach((k) => {
+        if (payload[k] === undefined) delete payload[k];
+      });
+
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
@@ -299,14 +430,15 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   };
 
   const getSubCategories = () => {
-    if (!formData.category) return [];
-    const parentCategory = categories.find(cat => cat._id === formData.category);
-    if (!parentCategory) return [];
-    return categories.filter(cat => cat.parentCategory === formData.category);
+    if (!formData.category) return [] as Category[];
+    const list = categories || [];
+    const parentCategory = list.find(cat => cat._id === formData.category);
+    if (!parentCategory) return [] as Category[];
+    return list.filter(cat => cat.parentCategory === formData.category);
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="6xl">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -386,7 +518,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   required
                 >
                   <option value="">Select Category</option>
-                  {categories.filter(cat => !cat.parentCategory).map(category => (
+                  {(categories || []).filter(cat => !cat.parentCategory).map(category => (
                     <option key={category._id} value={category._id}>
                       {category.name}
                     </option>
@@ -403,9 +535,44 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   disabled={!formData.category}
                 >
                   <option value="">Select Sub Category</option>
-                  {getSubCategories().map(category => (
+                  {(getSubCategories() || []).map(category => (
                     <option key={category._id} value={category._id}>
                       {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label htmlFor="seller">Seller *</Label>
+                <select
+                  id="seller"
+                  value={formData.seller || ""}
+                  onChange={(e) => handleInputChange("seller", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Seller</option>
+                  {(sellers || []).map(seller => (
+                    <option key={seller._id} value={seller._id}>
+                      {seller.firstName} {seller.lastName} {seller.companyName ? `(${seller.companyName})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="supplier">Supplier</Label>
+                <select
+                  id="supplier"
+                  value={formData.supplier || ""}
+                  onChange={(e) => handleInputChange("supplier", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Supplier</option>
+                  {(sellers || []).map(seller => (
+                    <option key={seller._id} value={seller._id}>
+                      {seller.firstName} {seller.lastName} {seller.companyName ? `(${seller.companyName})` : ''}
                     </option>
                   ))}
                 </select>
@@ -413,13 +580,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <div className="md:col-span-2">
                 <Label>Tags</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {tags.map(tag => (
+                  {(tags || []).map(tag => (
                     <label key={tag._id} className="flex items-center gap-2">
                       <Checkbox
                         checked={formData.tags?.includes(tag._id) || false}
-                        onChange={(e) => {
+                        onChange={(checked) => {
                           const currentTags = formData.tags || [];
-                          if (e.target.checked) {
+                          if (checked) {
                             handleInputChange("tags", [...currentTags, tag._id]);
                           } else {
                             handleInputChange("tags", currentTags.filter(t => t !== tag._id));
@@ -515,20 +682,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
               </div>
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.trackQuantity || false}
-                    onChange={(checked) => handleInputChange("trackQuantity", checked)}
-                  />
-                  <span className="text-sm">Track Quantity</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.allowBackorder || false}
-                    onChange={(checked) => handleInputChange("allowBackorder", checked)}
-                  />
-                  <span className="text-sm">Allow Backorder</span>
-                </label>
+                <Switch
+                  label="Track Quantity"
+                  defaultChecked={formData.trackQuantity || false}
+                  onChange={(checked) => handleInputChange("trackQuantity", checked)}
+                />
+                <Switch
+                  label="Allow Backorder"
+                  defaultChecked={formData.allowBackorder || false}
+                  onChange={(checked) => handleInputChange("allowBackorder", checked)}
+                />
               </div>
             </div>
           </div>
@@ -552,27 +715,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </select>
               </div>
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.isVisible || false}
-                    onChange={(checked) => handleInputChange("isVisible", checked)}
-                  />
-                  <span className="text-sm">Visible</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.isFeatured || false}
-                    onChange={(checked) => handleInputChange("isFeatured", checked)}
-                  />
-                  <span className="text-sm">Featured</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.isDigital || false}
-                    onChange={(checked) => handleInputChange("isDigital", checked)}
-                  />
-                  <span className="text-sm">Digital</span>
-                </label>
+                <Switch
+                  label="Visible"
+                  defaultChecked={formData.isVisible || false}
+                  onChange={(checked) => handleInputChange("isVisible", checked)}
+                />
+                <Switch
+                  label="Featured"
+                  defaultChecked={formData.isFeatured || false}
+                  onChange={(checked) => handleInputChange("isFeatured", checked)}
+                />
+                <Switch
+                  label="Digital"
+                  defaultChecked={formData.isDigital || false}
+                  onChange={(checked) => handleInputChange("isDigital", checked)}
+                />
               </div>
             </div>
           </div>
@@ -602,7 +759,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               
               {formData.images && formData.images.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {formData.images.map((image, index) => (
+                  {(formData.images || []).map((image, index) => (
                     <div key={index} className="relative border rounded-lg p-2">
                       <img
                         src={image.url}
@@ -669,7 +826,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               
               {formData.specifications && formData.specifications.length > 0 && (
                 <div className="space-y-2">
-                  {formData.specifications.map((spec, index) => (
+                  {(formData.specifications || []).map((spec, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border">
                       <span className="font-medium">{spec.name}:</span>
                       <span>{spec.value}</span>
@@ -689,7 +846,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
+          <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white dark:bg-gray-900 z-10">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>

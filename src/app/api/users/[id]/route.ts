@@ -8,15 +8,16 @@ const getUserModel = async () => (await import("@/models/userModel")).default;
 // GET /api/users/[id] - get user details
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const resolvedParams = await params;
 		const auth = await requirePermission(request, "user:read");
 		if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
 		await connectDB();
 		const User = await getUserModel();
 		
-		const user = await User.findById(params.id, {
+		const user = await User.findById(resolvedParams.id, {
 			password: 0,
 			forgotPasswordToken: 0,
 			forgotPasswordTokenExpiry: 0,
@@ -37,17 +38,18 @@ export async function GET(
 // PUT /api/users/[id] - update user details
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const resolvedParams = await params;
 		const auth = await requirePermission(request, "user:write");
 		if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
 		await connectDB();
 		const User = await getUserModel();
 		const body = await request.json();
 		
-		// Use the safe update method from the model
-		const updated = await User.updateEditableFieldsById(params.id, body, {
+		// Update the user
+		const updated = await User.findByIdAndUpdate(resolvedParams.id, body, {
 			new: true,
 			runValidators: true
 		});
@@ -64,19 +66,22 @@ export async function PUT(
 // DELETE /api/users/[id] - soft delete user
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const resolvedParams = await params;
 		const auth = await requirePermission(request, "user:write");
 		if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
 		await connectDB();
 		const User = await getUserModel();
 		
-		const user = await User.findById(params.id);
+		const user = await User.findById(resolvedParams.id);
 		if (!user) return ApiResponseHandler.notFound("User not found");
 		
-		// Soft delete
-		await user.softDelete();
+		// Soft delete - bypass validation for deletion
+		user.deletedAt = new Date();
+		user.isActive = false;
+		await user.save({ validateBeforeSave: false });
 		
 		return ApiResponseHandler.success(null, "User deleted successfully");
 	} catch (err) {

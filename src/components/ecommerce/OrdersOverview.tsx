@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Badge from "../ui/badge/Badge";
 import { formatDollar, formatDate } from "@/utils/formatters";
 import { 
@@ -20,9 +20,14 @@ interface Order {
 }
 
 export const OrdersOverview = () => {
+  const [mounted, setMounted] = useState(false);
   const [timeFilter, setTimeFilter] = useState<'monthly' | 'yearly'>('monthly');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Mock data - in real app, this would come from API
   const getOrdersData = (): Order[] => {
@@ -123,7 +128,7 @@ export const OrdersOverview = () => {
       case 'processing': return 'warning';
       case 'pending': return 'warning';
       case 'cancelled': return 'error';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 
@@ -133,7 +138,7 @@ export const OrdersOverview = () => {
       case 'pending': return 'warning';
       case 'failed': return 'error';
       case 'refunded': return 'info';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 
@@ -146,6 +151,20 @@ export const OrdersOverview = () => {
 
   const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
   const totalOrders = filteredOrders.length;
+
+  if (!mounted) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -248,7 +267,7 @@ export const OrdersOverview = () => {
                       {order.orderNumber}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(order.orderDate).toLocaleDateString()}
+                      {formatDate(order.orderDate)}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">
                       {order.items} item{order.items !== 1 ? 's' : ''}

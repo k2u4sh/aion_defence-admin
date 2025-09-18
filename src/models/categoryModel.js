@@ -37,7 +37,7 @@ const categorySchema = new mongoose.Schema({
   },
   parentCategory: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Categories",
+    ref: "Category",
     default: null
   },
   level: {
@@ -58,12 +58,24 @@ const categorySchema = new mongoose.Schema({
   },
   featuredProducts: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Products"
+    ref: "Product"
   }],
   tags: [{
     type: String,
     trim: true,
     lowercase: true
+  }],
+  subcategories: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    slug: {
+      type: String,
+      required: true,
+      trim: true
+    }
   }]
 }, { 
   timestamps: true,
@@ -74,7 +86,7 @@ const categorySchema = new mongoose.Schema({
 // Indexes for better performance
 categorySchema.index({ isActive: 1, sortOrder: 1 });
 categorySchema.index({ parentCategory: 1, level: 1 });
-categorySchema.index({ slug: 1 });
+// slug is already unique; avoid duplicate index definitions
 
 // Create a slug from the name before saving
 categorySchema.pre('save', function(next) {
@@ -154,10 +166,5 @@ categorySchema.methods.hasChildren = function() {
   return this.constructor.countDocuments({ parentCategory: this._id, isActive: true });
 };
 
-// Clear any existing model to avoid conflicts
-if (mongoose.models.Categories) {
-  delete mongoose.models.Categories;
-}
-
-const Category = mongoose.model("Categories", categorySchema);
+const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 export default Category;

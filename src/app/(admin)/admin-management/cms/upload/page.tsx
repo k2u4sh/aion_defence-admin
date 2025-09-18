@@ -320,7 +320,7 @@ export default function MediaUploadPage() {
               <h3 className="font-medium text-gray-900 truncate mb-1">{file.name}</h3>
               <div className="text-sm text-gray-500 space-y-1">
                 <div>{formatFileSize(file.size)}</div>
-                <div>{new Date(file.uploadedAt).toLocaleDateString()}</div>
+                <div>{new Date(file.uploadedAt).toISOString().split('T')[0]}</div>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {file.tags.map((tag, index) => (
                     <span
@@ -460,7 +460,7 @@ export default function MediaUploadPage() {
                 </div>
                 <div>
                   <span className="font-medium">Uploaded:</span>
-                  <span className="ml-2">{new Date(previewFile.uploadedAt).toLocaleDateString()}</span>
+                  <span className="ml-2">{new Date(previewFile.uploadedAt).toISOString().split('T')[0]}</span>
                 </div>
               </div>
               

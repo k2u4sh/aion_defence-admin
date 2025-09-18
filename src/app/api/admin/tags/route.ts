@@ -3,9 +3,18 @@ import { connectToDatabase as connectDB } from "@/lib/db";
 import Tag from "@/models/tagModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
 
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  Tag;
+};
+
 // GET /api/admin/tags - Get all tags with pagination and filters
 export async function GET(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -19,14 +28,17 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
-    const isActive = searchParams.get("isActive") || "";
+    const status = searchParams.get("status") || "";
+    const color = searchParams.get("color") || "";
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
+    const skip = (page - 1) * limit;
+
     // Build query
-    const query: any = {};
+    const query: any = { deletedAt: null };
     
     if (search) {
       query.$or = [
@@ -35,18 +47,19 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (isActive !== "") {
-      query.isActive = isActive === "true";
+    if (status) {
+      query.isActive = status === "active";
     }
 
-    // Build sort object
+    if (color) {
+      query.color = color;
+    }
+
+    // Build sort
     const sort: any = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-    // Calculate skip value
-    const skip = (page - 1) * limit;
-
-    // Get tags
+    // Get tags with pagination
     const tags = await Tag.find(query)
       .sort(sort)
       .skip(skip)
@@ -56,24 +69,40 @@ export async function GET(request: NextRequest) {
     // Get total count
     const total = await Tag.countDocuments(query);
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    // Get tag statistics
+    const stats = await Tag.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: null,
+          totalTags: { $sum: 1 },
+          activeTags: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] }
+          },
+          inactiveTags: {
+            $sum: { $cond: [{ $eq: ["$isActive", false] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const tagStats = stats[0] || {
+      totalTags: 0,
+      activeTags: 0,
+      inactiveTags: 0
+    };
 
     return NextResponse.json({
       success: true,
-      data: {
-        tags,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNextPage,
-          hasPrevPage
-        }
-      }
+      message: "Tags fetched successfully",
+      data: tags,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      stats: tagStats
     });
 
   } catch (error) {
@@ -88,6 +117,9 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/tags - Create a new tag
 export async function POST(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -100,7 +132,14 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const adminId = authCheck.admin._id;
+    const adminId = authCheck.admin?._id;
+
+    if (!adminId) {
+      return NextResponse.json(
+        { success: false, message: "Admin not found" },
+        { status: 401 }
+      );
+    }
 
     // Create tag with admin as creator
     const tagData = {
@@ -123,15 +162,14 @@ export async function POST(request: NextRequest) {
     
     if (error.code === 11000) {
       return NextResponse.json(
-        { success: false, message: "Tag with this name or slug already exists" },
+        { success: false, message: "Tag with this name already exists" },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to create tag" },
+      { success: false, message: "Failed to create tag" },
       { status: 500 }
     );
   }
 }
-

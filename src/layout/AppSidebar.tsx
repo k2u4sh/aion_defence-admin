@@ -10,6 +10,8 @@ import {
   HorizontaLDots,
   UserCircleIcon,
   BoxIcon,
+  MessageIcon,
+  BoltIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 
@@ -50,6 +52,22 @@ const navItems: NavItem[] = [
     icon: <BoxIcon />,
     subItems: [
       { name: "Orders", path: "/admin-management/orders", pro: false },
+    ],
+  },
+  // Enquiry Management section
+  {
+    name: "Enquiry Management",
+    icon: <MessageIcon />,
+    subItems: [
+      { name: "Enquiries", path: "/admin-management/enquiries", pro: false },
+    ],
+  },
+  // Bid Management section
+  {
+    name: "Bid Management",
+    icon: <BoltIcon />,
+    subItems: [
+      { name: "Bids", path: "/admin-management/bids", pro: false },
     ],
   },
   {
@@ -262,13 +280,13 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-3 sm:px-5 left-0 bg-gray-900 dark:bg-gray-800 dark:border-gray-700 text-gray-100 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-700 
         ${
           isExpanded || isMobileOpen
-            ? "w-[290px]"
+            ? "w-[280px] sm:w-[290px]"
             : isHovered
-            ? "w-[290px]"
-            : "w-[90px]"
+            ? "w-[280px] sm:w-[290px]"
+            : "w-[70px] sm:w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
@@ -285,23 +303,23 @@ const AppSidebar: React.FC = () => {
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
+                src="/images/logo/defence-cart-logo.svg"
+                alt="Defence Cart Logo"
                 width={150}
                 height={40}
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
+                src="/images/logo/defence-cart-logo-dark.svg"
+                alt="Defence Cart Logo"
                 width={150}
                 height={40}
               />
             </>
           ) : (
             <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
+              src="/images/logo/defence-cart-logo-icon.svg"
+              alt="Defence Cart Logo"
               width={32}
               height={32}
             />
@@ -313,7 +331,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-300 ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"
@@ -331,7 +349,7 @@ const AppSidebar: React.FC = () => {
             {othersItems.length > 0 && (
               <div className="">
                 <h2
-                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-300 ${
                     !isExpanded && !isHovered
                       ? "lg:justify-center"
                       : "justify-start"

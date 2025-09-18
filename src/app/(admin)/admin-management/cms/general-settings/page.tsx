@@ -461,13 +461,13 @@ export default function GeneralSettingsPage() {
           {settings.createdAt && (
             <div>
               <span className="text-gray-500">Created:</span>
-              <span className="ml-2">{new Date(settings.createdAt).toLocaleDateString()}</span>
+              <span className="ml-2">{new Date(settings.createdAt).toISOString().split('T')[0]}</span>
             </div>
           )}
           {settings.updatedAt && (
             <div>
               <span className="text-gray-500">Last Updated:</span>
-              <span className="ml-2">{new Date(settings.updatedAt).toLocaleDateString()}</span>
+              <span className="ml-2">{new Date(settings.updatedAt).toISOString().split('T')[0]}</span>
             </div>
           )}
         </div>

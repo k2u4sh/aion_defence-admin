@@ -7,13 +7,14 @@ const getAdminModel = async () => (await import("@/models/adminModel")).default;
 const getAdminGroupModel = async () => (await import("@/models/adminGroupModel")).default;
 
 // GET /api/admin/[id]
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "admin:read");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
     const Admin = await getAdminModel();
-    const admin = await Admin.findById(params.id).populate("groups", "name permissions");
+    const admin = await Admin.findById(resolvedParams.id).populate("groups", "name permissions");
     if (!admin) return ApiResponseHandler.notFound("Admin not found");
     return ApiResponseHandler.success(admin, "Admin fetched");
   } catch (err) {
@@ -23,8 +24,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/admin/[id]
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "admin:write");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
@@ -50,17 +52,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // If password change is requested, use document save to trigger hashing
     if (typeof password === 'string' && password.length > 0) {
-      const doc = await Admin.findById(params.id).select('+password');
+      const doc = await Admin.findById(resolvedParams.id).select('+password');
       if (!doc) return ApiResponseHandler.notFound("Admin not found");
       // Apply other updates on the document
       Object.assign(doc, update);
       doc.password = password;
       await doc.save();
-      const populated = await Admin.findById(params.id).populate("groups", "name permissions");
+      const populated = await Admin.findById(resolvedParams.id).populate("groups", "name permissions");
       return ApiResponseHandler.success(populated, "Admin updated");
     }
 
-    const admin = await Admin.findByIdAndUpdate(params.id, update, { new: true }).populate("groups", "name permissions");
+    const admin = await Admin.findByIdAndUpdate(resolvedParams.id, update, { new: true }).populate("groups", "name permissions");
     if (!admin) return ApiResponseHandler.notFound("Admin not found");
     return ApiResponseHandler.success(admin, "Admin updated");
   } catch (err) {
@@ -70,13 +72,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/admin/[id] (soft delete)
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "admin:write");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
     const Admin = await getAdminModel();
-    const admin = await Admin.findById(params.id);
+    const admin = await Admin.findById(resolvedParams.id);
     if (!admin) return ApiResponseHandler.notFound("Admin not found");
     admin.deletedAt = new Date();
     admin.isActive = false;

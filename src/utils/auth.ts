@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifyAccessToken, extractTokenFromHeader, type JWTPayload } from '@/utils/jwt';
 import { ApiResponseHandler, ErrorMessages, SuccessMessages } from "@/utils/apiResponse";
 import { Validator, ValidationSchemas } from "@/utils/validation";
@@ -92,11 +92,7 @@ export function requireVerifiedAccount(user: JWTPayload): {
     return {
       success: false,
       error: 'Account not verified',
-      response: ApiResponseHandler.success({
-        message: 'Access denied. Please verify your account first.',
-        success: false,
-        requiresVerification: true
-      }, 403)
+      response: ApiResponseHandler.error('Access denied. Please verify your account first.', 403)
     };
   }
   

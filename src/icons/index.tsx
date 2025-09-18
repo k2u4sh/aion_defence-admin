@@ -77,6 +77,20 @@ import AlertTriangleIcon from "./alert-triangle.svg";
 // Add missing icons for user management
 import PhoneIcon from "./phone.svg";
 
+// Add missing icons for enquiry and bid management
+import MessageIcon from "./chat.svg";
+import DollarIcon from "./dollar-line.svg";
+import StarIcon from "./shooting-star.svg";
+
+// Add missing icons for order management
+import TruckIcon from "./arrow-right.svg"; // Use arrow-right as truck icon
+import PackageIcon from "./box.svg";
+import CreditCardIcon from "./dollar-line.svg"; // Use dollar-line as credit card icon
+import MapPinIcon from "./box.svg"; // Use box as map pin icon
+
+// Add missing icons for tag management
+import TagIcon from "./text.svg"; // Use text icon as tag icon
+
 export {
   DownloadIcon,
   BellIcon,
@@ -153,5 +167,16 @@ export {
   // Add user management icons
   PhoneIcon,
   // Add clock icon alias
-  ClockIcon
+  ClockIcon,
+  // Add enquiry and bid management icons
+  MessageIcon,
+  DollarIcon,
+  StarIcon,
+  // Add order management icons
+  TruckIcon,
+  PackageIcon,
+  CreditCardIcon,
+  MapPinIcon,
+  // Add tag management icons
+  TagIcon
 };

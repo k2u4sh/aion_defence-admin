@@ -100,7 +100,11 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const adminId = authCheck.admin._id;
+    const adminId = authCheck.admin?._id;
+    if (!adminId) return NextResponse.json(
+      { success: false, message: "Admin not found" },
+      { status: 401 }
+    );
 
     // Create group with admin as creator
     const groupData = {

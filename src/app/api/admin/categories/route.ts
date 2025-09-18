@@ -3,9 +3,18 @@ import { connectToDatabase as connectDB } from "@/lib/db";
 import Category from "@/models/categoryModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
 
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  Category;
+};
+
 // GET /api/admin/categories - Get all categories with pagination and filters
 export async function GET(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -19,15 +28,18 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
-    const isActive = searchParams.get("isActive") || "";
+    const status = searchParams.get("status") || "";
     const parentCategory = searchParams.get("parentCategory") || "";
-    const sortBy = searchParams.get("sortBy") || "sortOrder";
-    const sortOrder = searchParams.get("sortOrder") || "asc";
+    const level = searchParams.get("level") || "";
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = {};
+    const query: any = { deletedAt: null };
     
     if (search) {
       query.$or = [
@@ -36,29 +48,25 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (isActive !== "") {
-      query.isActive = isActive === "true";
+    if (status) {
+      query.isActive = status === "active";
     }
 
     if (parentCategory) {
-      if (parentCategory === "root") {
-        query.parentCategory = null;
-      } else {
-        query.parentCategory = parentCategory;
-      }
+      query.parentCategory = parentCategory;
     }
 
-    // Build sort object
+    if (level) {
+      query.level = parseInt(level);
+    }
+
+    // Build sort
     const sort: any = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-    // Calculate skip value
-    const skip = (page - 1) * limit;
-
-    // Get categories with populated fields
+    // Get categories with pagination
     const categories = await Category.find(query)
-      .populate("parentCategory", "name")
-      .populate("featuredProducts", "name")
+      .populate("parentCategory", "name level")
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -67,24 +75,40 @@ export async function GET(request: NextRequest) {
     // Get total count
     const total = await Category.countDocuments(query);
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    // Get category statistics
+    const stats = await Category.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: null,
+          totalCategories: { $sum: 1 },
+          activeCategories: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] }
+          },
+          inactiveCategories: {
+            $sum: { $cond: [{ $eq: ["$isActive", false] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const categoryStats = stats[0] || {
+      totalCategories: 0,
+      activeCategories: 0,
+      inactiveCategories: 0
+    };
 
     return NextResponse.json({
       success: true,
-      data: {
-        categories,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNextPage,
-          hasPrevPage
-        }
-      }
+      message: "Categories fetched successfully",
+      data: categories,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      stats: categoryStats
     });
 
   } catch (error) {
@@ -99,6 +123,9 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/categories - Create a new category
 export async function POST(request: NextRequest) {
   try {
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
     // Check admin authentication
     const authCheck = await requireAdminAuth(request);
     if (!authCheck.success) {
@@ -111,11 +138,28 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const adminId = authCheck.admin._id;
+    const adminId = authCheck.admin?._id;
+
+    if (!adminId) {
+      return NextResponse.json(
+        { success: false, message: "Admin not found" },
+        { status: 401 }
+      );
+    }
+
+    // Calculate level based on parent category
+    let level = 0;
+    if (body.parentCategory) {
+      const parent = await Category.findById(body.parentCategory);
+      if (parent) {
+        level = parent.level + 1;
+      }
+    }
 
     // Create category with admin as creator
     const categoryData = {
       ...body,
+      level,
       createdBy: adminId,
       updatedBy: adminId
     };
@@ -125,7 +169,7 @@ export async function POST(request: NextRequest) {
 
     // Populate the created category
     const populatedCategory = await Category.findById(category._id)
-      .populate("parentCategory", "name");
+      .populate("parentCategory", "name level");
 
     return NextResponse.json({
       success: true,
@@ -138,15 +182,14 @@ export async function POST(request: NextRequest) {
     
     if (error.code === 11000) {
       return NextResponse.json(
-        { success: false, message: "Category with this name or slug already exists" },
+        { success: false, message: "Category with this name already exists" },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to create category" },
+      { success: false, message: "Failed to create category" },
       { status: 500 }
     );
   }
 }
-

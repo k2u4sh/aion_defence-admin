@@ -8,7 +8,7 @@ interface ModalProps {
   children: React.ReactNode;
   showCloseButton?: boolean;
   isFullscreen?: boolean;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -68,6 +68,12 @@ export const Modal: React.FC<ModalProps> = ({
         return "max-w-3xl";
       case "4xl":
         return "max-w-4xl";
+      case "5xl":
+        return "max-w-5xl";
+      case "6xl":
+        return "max-w-6xl";
+      case "7xl":
+        return "max-w-7xl";
       default:
         return "max-w-md";
     }
@@ -75,10 +81,10 @@ export const Modal: React.FC<ModalProps> = ({
 
   const contentClasses = isFullscreen
     ? "w-full h-full"
-    : `relative w-full rounded-3xl bg-white dark:bg-gray-900 ${getSizeClasses()}`;
+    : `relative w-full rounded-3xl bg-white dark:bg-gray-900 ${getSizeClasses()} max-h-[85vh] overflow-y-auto`;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto modal z-99999 p-4">
+    <div className="fixed inset-0 flex items-center justify-center modal z-99999 p-4">
       {!isFullscreen && (
         <div
           className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"

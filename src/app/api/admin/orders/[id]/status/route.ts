@@ -1,72 +1,121 @@
-import { connectDB } from "@/utils/db";
-import { NextRequest } from "next/server";
-import { ApiResponseHandler } from "@/utils/apiResponse";
-import { requirePermission } from "@/utils/adminAccess";
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase as connectDB } from "@/lib/db";
+import Order from "@/models/orderModel";
+import User from "@/models/userModel";
+import Product from "@/models/productModel";
+import { requireAdminAuth } from "@/utils/adminAccess";
 
-const getOrderModel = async () => (await import("@/models/orderModel")).default;
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  User;
+  Product;
+  Order;
+};
 
+// PUT /api/admin/orders/[id]/status - Update order or payment status
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission(request, "admin:read");
-    if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
+    // Check admin authentication
+    const authCheck = await requireAdminAuth(request);
+    if (!authCheck.success) {
+      return NextResponse.json(
+        { success: false, message: authCheck.message || "Authentication required" },
+        { status: 401 }
+      );
+    }
 
     await connectDB();
-    const Order = await getOrderModel();
-    const { id } = params;
 
+    const { id } = await params;
     const body = await request.json();
-    const { orderStatus, paymentStatus } = body;
+    const adminId = authCheck.admin?._id;
 
-    // Validate the order exists
-    const existingOrder = await Order.findById(id);
-    if (!existingOrder) {
-      return ApiResponseHandler.notFound("Order not found");
+    if (!adminId) {
+      return NextResponse.json(
+        { success: false, message: "Admin not found" },
+        { status: 401 }
+      );
     }
 
-    // Build update object
-    const updateData: any = {};
-    if (orderStatus) {
-      // Validate order status
-      const validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-      if (!validOrderStatuses.includes(orderStatus)) {
-        return ApiResponseHandler.badRequest("Invalid order status");
+    // Find the order
+    const order = await Order.findById(id);
+    if (!order) {
+      return NextResponse.json(
+        { success: false, message: "Order not found" },
+        { status: 404 }
+      );
+    }
+
+    // Prepare update data
+    const updateData: any = { updatedBy: adminId };
+
+    // Handle order status update
+    if (body.status) {
+      updateData.status = body.status;
+      
+      // Set timestamp based on status
+      const now = new Date();
+      switch (body.status) {
+        case 'confirmed':
+          updateData.confirmedAt = now;
+          break;
+        case 'shipped':
+          updateData.shippedAt = now;
+          break;
+        case 'delivered':
+          updateData.deliveredAt = now;
+          break;
+        case 'cancelled':
+          updateData.cancelledAt = now;
+          break;
       }
-      updateData.orderStatus = orderStatus;
     }
 
-    if (paymentStatus) {
-      // Validate payment status
-      const validPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
-      if (!validPaymentStatuses.includes(paymentStatus)) {
-        return ApiResponseHandler.badRequest("Invalid payment status");
+    // Handle payment status update
+    if (body.payment) {
+      updateData.payment = {
+        ...order.payment,
+        ...body.payment
+      };
+      
+      // Set payment timestamp
+      if (body.payment.status === 'completed' && !order.payment.paidAt) {
+        updateData.payment.paidAt = new Date();
       }
-      updateData.paymentStatus = paymentStatus;
+      if (body.payment.status === 'refunded' && !order.payment.refundedAt) {
+        updateData.payment.refundedAt = new Date();
+      }
     }
 
-    if (Object.keys(updateData).length === 0) {
-      return ApiResponseHandler.badRequest("No valid status to update");
-    }
-
-    // Add timestamp
-    updateData.updatedAt = new Date();
-
-    // Update the order
+    // Update order
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
-    ).lean();
+    )
+      .populate("buyer", "firstName lastName email phone companyName")
+      .populate("items.product", "name sku basePrice images")
+      .populate("items.seller", "firstName lastName companyName email")
+      .populate("messages.from", "firstName lastName");
 
-    return ApiResponseHandler.success("Order status updated successfully", {
-      order: updatedOrder,
-      updatedFields: Object.keys(updateData)
+    return NextResponse.json({
+      success: true,
+      message: "Order status updated successfully",
+      data: updatedOrder
     });
 
-  } catch (err) {
-    console.error("Error updating order status:", err);
-    return ApiResponseHandler.serverError("Failed to update order status");
+  } catch (error: any) {
+    console.error("Error updating order status:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to update order status" },
+      { status: 500 }
+    );
   }
 }

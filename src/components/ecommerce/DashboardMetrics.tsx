@@ -140,7 +140,6 @@ export const DashboardMetrics = () => {
               </div>
               <Badge 
                 color={metric.changeType === 'increase' ? 'success' : 'error'}
-                className="text-xs"
               >
                 {metric.changeType === 'increase' ? <ArrowUpIcon /> : <ArrowDownIcon />}
                 {metric.change}%

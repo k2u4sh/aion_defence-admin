@@ -199,8 +199,10 @@ export async function DELETE(request: NextRequest) {
 		const user = await User.findById(id);
 		if (!user) return ApiResponseHandler.notFound("User not found");
 
-		// Soft delete
-		//await user.softDelete();
+		// Soft delete - bypass validation for deletion
+		user.deletedAt = new Date();
+		user.isActive = false;
+		await user.save({ validateBeforeSave: false });
 		
 		return ApiResponseHandler.success(null, "User deleted successfully");
 	} catch (err) {

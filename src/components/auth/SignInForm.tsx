@@ -127,22 +127,16 @@ export default function SignInForm() {
                   </div>
                 </div>
                 {error && <p className="text-error-500 text-sm">{error}</p>}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-start">
                   <div className="flex items-center gap-3">
                     <Checkbox checked={isChecked} onChange={setIsChecked} />
                     <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
                       Keep me logged in
                     </span>
                   </div>
-                  <Link
-                    href="/reset-password"
-                    className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                  >
-                    Forgot password?
-                  </Link>
                 </div>
                 <div>
-                  <Button type="submit" disabled={loading} className="w-full" size="sm">
+                  <Button type="submit" disabled={loading} className="w-full bg-defence-gold-500 hover:bg-defence-gold-600 text-white" size="sm">
                     {loading ? 'Signing in...' : 'Sign in'}
                   </Button>
                 </div>

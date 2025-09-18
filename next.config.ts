@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
+  // Ensure proper chunk loading with unique build ID
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
 };
 
 export default nextConfig;

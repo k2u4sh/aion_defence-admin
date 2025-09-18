@@ -31,7 +31,6 @@ const variantSchema = new mongoose.Schema({
   sku: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
     uppercase: true
   },
@@ -136,7 +135,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Product description is required'],
     trim: true,
-    maxlength: [2000, 'Description cannot exceed 2000 characters']
+    maxlength: [5000, 'Description cannot exceed 5000 characters']
   },
   shortDescription: {
     type: String,
@@ -207,7 +206,6 @@ const productSchema = new mongoose.Schema({
   sku: {
     type: String,
     required: [true, 'SKU is required'],
-    unique: true,
     trim: true,
     uppercase: true
   },
@@ -218,6 +216,12 @@ const productSchema = new mongoose.Schema({
   trackQuantity: {
     type: Boolean,
     default: true
+  },
+  quantityPerOrder: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0
   },
   quantity: {
     type: Number,
@@ -236,6 +240,11 @@ const productSchema = new mongoose.Schema({
   },
 
   // Physical Properties
+  makeModel: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Make/Model cannot exceed 100 characters']
+  },
   weight: {
     type: Number,
     min: 0
@@ -247,17 +256,20 @@ const productSchema = new mongoose.Schema({
   },
   weightUnit: {
     type: String,
-    enum: ['kg', 'g', 'lb', 'oz'],
+    enum: ['kg', 'g'],
     default: 'kg'
   },
   dimensionUnit: {
     type: String,
-    enum: ['cm', 'm', 'in', 'ft'],
+    enum: ['cm', 'mm', 'm', 'in', 'ft'],
     default: 'cm'
   },
 
   // Media
-  images: [productImageSchema],
+  images: {
+    type: [productImageSchema],
+    default: []
+  },
   videos: [{
     url: String,
     title: String,
@@ -340,6 +352,48 @@ const productSchema = new mongoose.Schema({
     type: Date
   },
 
+  // Additional Options
+  restrictedBuyerAccess: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Restricted Buyer Access cannot exceed 200 characters']
+  },
+  productWarranty: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Product Warranty cannot exceed 200 characters']
+  },
+ 
+  installationTrainingSupport: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Installation Training Support cannot exceed 200 characters']
+  },
+
+  // Defense Certification
+  defenseCertification: {
+    certified: {
+      type: Boolean,
+      default: false
+    },
+    certificationNumber: {
+      type: String,
+      trim: true
+    },
+    certificationBody: {
+      type: String,
+      trim: true
+    },
+    validUntil: {
+      type: Date
+    },
+    documents: [{
+      name: String,
+      url: String,
+      type: String
+    }]
+  },
+
   // Audit fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -372,7 +426,6 @@ productSchema.index({ createdAt: -1 });
 productSchema.index({ averageRating: -1 });
 productSchema.index({ basePrice: 1 });
 productSchema.index({ quantity: 1 });
-productSchema.index({ sku: 1 }, { unique: true });
 
 // Virtual for discounted price
 productSchema.virtual('discountPercentage').get(function() {
@@ -392,8 +445,9 @@ productSchema.virtual('stockStatus').get(function() {
 
 // Virtual for primary image
 productSchema.virtual('primaryImage').get(function() {
-  const primary = this.images.find(img => img.isPrimary);
-  return primary || this.images[0] || null;
+  const imgs = Array.isArray(this.images) ? this.images : [];
+  const primary = imgs.find(img => img && img.isPrimary);
+  return primary || imgs[0] || null;
 });
 
 // Virtual for total inventory value
@@ -516,9 +570,9 @@ productSchema.statics.searchProducts = function(searchTerm, filters = {}) {
 };
 
 // Clear any existing model to avoid conflicts
-if (mongoose.models.Products) {
-  delete mongoose.models.Products;
+if (mongoose.models.Product) {
+  delete mongoose.models.Product;
 }
 
-const Product = mongoose.model("Products", productSchema);
+const Product = mongoose.model("Product", productSchema);
 export default Product;

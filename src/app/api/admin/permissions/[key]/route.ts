@@ -5,13 +5,14 @@ import { requirePermission } from "@/utils/adminAccess";
 
 const getPermissionModel = async () => (await import("@/models/permissionModel")).default;
 
-export async function GET(request: NextRequest, { params }: { params: { key: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "role:read");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
     const Permission = await getPermissionModel();
-    const doc = await Permission.findOne({ key: params.key });
+    const doc = await Permission.findOne({ key: resolvedParams.key });
     if (!doc) return ApiResponseHandler.notFound("Permission not found");
     return ApiResponseHandler.success(doc, "Permission fetched");
   } catch (err) {
@@ -20,8 +21,9 @@ export async function GET(request: NextRequest, { params }: { params: { key: str
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { key: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "role:write");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
@@ -32,7 +34,7 @@ export async function PUT(request: NextRequest, { params }: { params: { key: str
     if (name !== undefined) update.name = name;
     if (description !== undefined) update.description = description;
     if (category !== undefined) update.category = category;
-    const doc = await Permission.findOneAndUpdate({ key: params.key }, update, { new: true });
+    const doc = await Permission.findOneAndUpdate({ key: resolvedParams.key }, update, { new: true });
     if (!doc) return ApiResponseHandler.notFound("Permission not found");
     return ApiResponseHandler.success(doc, "Permission updated");
   } catch (err) {
@@ -41,13 +43,14 @@ export async function PUT(request: NextRequest, { params }: { params: { key: str
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { key: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
+    const resolvedParams = await params;
     const auth = await requirePermission(request, "role:write");
     if (!auth) return ApiResponseHandler.unauthorized("Unauthorized");
     await connectDB();
     const Permission = await getPermissionModel();
-    const doc = await Permission.findOneAndDelete({ key: params.key });
+    const doc = await Permission.findOneAndDelete({ key: resolvedParams.key });
     if (!doc) return ApiResponseHandler.notFound("Permission not found");
     return ApiResponseHandler.success(null, "Permission deleted");
   } catch (err) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ApiResponseHandler } from "@/utils/apiResponse";
 
 export function addCorsHeaders(response: NextResponse) {
   response.headers.set('Access-Control-Allow-Origin', '*');

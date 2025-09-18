@@ -19,13 +19,12 @@ export default async function UsersPage() {
   if (process.env.MONGODB_URI) {
     await connectToDatabase();
     const User = await getUserModel();
-    const mongoUsers: Array<{ _id: Types.ObjectId; name: string; email: string; createdAt?: Date }> =
-      await User.find({}, { name: 1, email: 1, createdAt: 1 }).lean();
+    const mongoUsers = await User.find({}, { name: 1, email: 1, createdAt: 1 }).lean();
 
-    users = mongoUsers.map((u) => ({
+    users = mongoUsers.map((u: any) => ({
       id: u._id.toString(),
-      name: u.name,
-      email: u.email,
+      name: u.name || '',
+      email: u.email || '',
       createdAt: (u.createdAt ?? new Date()).toISOString(),
     }));
   }

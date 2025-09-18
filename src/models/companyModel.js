@@ -22,6 +22,8 @@ const userDetailSchema = new mongoose.Schema({
 }, { _id: false });
 
 const companySchema = new mongoose.Schema({
+  userId: { type: String, required: true }, // Link to registered user
+  slug: { type: String, required: true, unique: true }, // Unique slug for company
   name: { type: String, required: true },
   logo: { type: String }, // file path or URL
   description: { type: String, required: true },
@@ -29,6 +31,7 @@ const companySchema = new mongoose.Schema({
   mailingAddresses: [addressSchema],
   parentCompany: { type: String },
   parentCompanyNotAvailable: { type: Boolean, default: false },
+  parentCompanyDescription: { type: String },
   website: { type: String },
   brochures: [{ type: String }], // file paths or URLs
   users: [userDetailSchema],
@@ -48,6 +51,10 @@ const companySchema = new mongoose.Schema({
   agreedToTerms: { type: Boolean, required: true },
   createdAt: { type: Date, default: Date.now }
 });
+
+// Create indexes for better performance
+companySchema.index({ slug: 1 }, { unique: true });
+companySchema.index({ userId: 1 }, { unique: true }); // Ensure only one company per user
 
 const Company = mongoose.models.Company || mongoose.model("Company", companySchema);
 export default Company;

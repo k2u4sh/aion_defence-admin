@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
@@ -18,7 +18,7 @@ interface HeroSection {
   updatedAt?: string;
 }
 
-export default function HeroSectionPage() {
+function HeroSectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isPreview = searchParams.get('preview') === 'true';
@@ -405,13 +405,13 @@ export default function HeroSectionPage() {
           {heroData.createdAt && (
             <div>
               <span className="text-gray-500">Created:</span>
-              <span className="ml-2">{new Date(heroData.createdAt).toLocaleDateString()}</span>
+              <span className="ml-2">{new Date(heroData.createdAt).toISOString().split('T')[0]}</span>
             </div>
           )}
           {heroData.updatedAt && (
             <div>
               <span className="text-gray-500">Last Updated:</span>
-              <span className="ml-2">{new Date(heroData.updatedAt).toLocaleDateString()}</span>
+              <span className="ml-2">{new Date(heroData.updatedAt).toISOString().split('T')[0]}</span>
             </div>
           )}
         </div>
@@ -460,5 +460,13 @@ export default function HeroSectionPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function HeroSectionPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HeroSectionContent />
+    </Suspense>
   );
 }

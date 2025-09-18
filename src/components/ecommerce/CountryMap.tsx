@@ -1,11 +1,25 @@
-import React from "react";
-// import { VectorMap } from "@react-jvectormap/core";
-import { worldMill } from "@react-jvectormap/world";
-import dynamic from "next/dynamic";
+"use client";
 
+import React from "react";
+import dynamic from "next/dynamic";
+import { worldMill } from "@react-jvectormap/world";
+
+// Dynamic import with proper error handling
 const VectorMap = dynamic(
-  () => import("@react-jvectormap/core").then((mod) => mod.VectorMap),
-  { ssr: false }
+  () => import("@react-jvectormap/core").then((mod) => {
+    if (mod && mod.VectorMap) {
+      return { default: mod.VectorMap };
+    }
+    throw new Error("VectorMap component not found");
+  }),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <div className="text-gray-500 dark:text-gray-400">Loading map...</div>
+      </div>
+    )
+  }
 );
 
 // Define the component props

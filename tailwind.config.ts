@@ -130,6 +130,33 @@ export default {
         'theme-purple': {
           500: '#7a5af8',
         },
+        // Defence Cart Brand Colors
+        'defence-gold': {
+          50: '#fefdf8',
+          100: '#fdf9e8',
+          200: '#faf0c7',
+          300: '#f6e4a3',
+          400: '#f0d374',
+          500: '#D4AF37', // Primary golden yellow
+          600: '#b8941f',
+          700: '#9a7a1a',
+          800: '#7d6116',
+          900: '#664d13',
+          950: '#3d2e0b',
+        },
+        'defence-olive': {
+          50: '#f7f8f4',
+          100: '#eef0e6',
+          200: '#dde2cc',
+          300: '#c8d0a8',
+          400: '#b0bc7f',
+          500: '#6B7C32', // Primary olive green
+          600: '#5a6a2a',
+          700: '#4a5723',
+          800: '#3d471e',
+          900: '#333c1b',
+          950: '#1c2010',
+        },
       },
       boxShadow: {
         'theme-sm': '0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06)',

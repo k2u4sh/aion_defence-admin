@@ -2,6 +2,7 @@ import { connectDB } from "@/utils/db";
 import { NextRequest } from "next/server";
 import { ApiResponseHandler } from "@/utils/apiResponse";
 import { generateTokenPair } from "@/utils/jwt";
+import bcrypt from "bcryptjs";
 
 const getAdminModel = async () => (await import("@/models/adminModel")).default;
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     const admin = await Admin.findOne({ email: String(email).toLowerCase(), deletedAt: null }).select("+password");
     if (!admin) return ApiResponseHandler.error("Invalid credentials", 401);
 
-    const ok = await admin.comparePassword(password);
+    const ok = await bcrypt.compare(password, admin.password as string);
     if (!ok) return ApiResponseHandler.error("Invalid credentials", 401);
 
     admin.lastLogin = new Date();
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest) {
 
     const tokens = generateTokenPair({
       userId: admin._id.toString(),
-      email: admin.email,
-      roles: [admin.role],
+      email: admin.email as string,
+      roles: [admin.role as string],
       isVerified: true
     });
 

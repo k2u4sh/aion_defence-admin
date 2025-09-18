@@ -167,7 +167,7 @@ cartSchema.methods.clearSellerItems = function(sellerId) {
 // Static methods
 cartSchema.statics.findByUser = function(userId) {
   return this.findOne({ user: userId })
-    .populate('items.product', 'name images basePrice slug status isVisible')
+    .populate('items.product', '_id name images basePrice slug status isVisible')
     .populate('items.seller', 'firstName lastName companyName sellerProfile.isVerifiedSeller');
 };
 

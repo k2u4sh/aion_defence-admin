@@ -10,15 +10,15 @@ export async function POST(req: NextRequest) {
   }
   await connectToDatabase();
   const User = await getUserModel();
-  const user = await User.findOne({ email }).select('+passwordHash').lean();
-  if (!user || !user.passwordHash) {
+  const user = await User.findOne({ email }).select('+password').lean();
+  if (!user || !user.password) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
-  const valid = await bcrypt.compare(password, user.passwordHash);
+  const valid = await bcrypt.compare(password, user.password as string);
   if (!valid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
-  const res = NextResponse.json({ ok: true, user: { id: user._id.toString(), name: user.name, email: user.email } });
+  const res = NextResponse.json({ ok: true, user: { id: user._id.toString(), name: (user as any).name || (user as any).firstName + ' ' + (user as any).lastName, email: user.email as string } });
   res.cookies.set('auth_session', String(user._id), {
     httpOnly: true,
     sameSite: 'lax',

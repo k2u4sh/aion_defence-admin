@@ -95,7 +95,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       .replace(/[^a-z0-9 -]/g, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
-      .trim("-");
+      .replace(/^-+|-+$/g, "");
   };
 
   const handleNameChange = (name: string) => {
@@ -284,7 +284,6 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   value={formData.metaTitle || ""}
                   onChange={(e) => handleInputChange("metaTitle", e.target.value)}
                   placeholder="SEO title for search engines"
-                  maxLength={60}
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   {formData.metaTitle?.length || 0}/60 characters
@@ -312,13 +311,11 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Status</h3>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2">
-                <Switch
-                  checked={formData.isActive || false}
-                  onChange={(checked) => handleInputChange("isActive", checked)}
-                />
-                <span className="text-sm">Active</span>
-              </label>
+              <Switch
+                label="Active"
+                defaultChecked={formData.isActive || false}
+                onChange={(checked) => handleInputChange("isActive", checked)}
+              />
               <p className="text-sm text-gray-500">
                 Inactive categories won't be visible to customers
               </p>

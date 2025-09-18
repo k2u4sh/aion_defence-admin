@@ -167,11 +167,7 @@ async function updateTag(request: NextRequest, user: JWTPayload) {
     console.error("Update tag error:", error);
     
     if (error instanceof Error && error.name === 'ValidationError') {
-      return ApiResponseHandler.success({
-        message: "Validation error",
-        success: false,
-        details: error.message
-      }, 400);
+      return ApiResponseHandler.error("Validation error: " + error.message, 400);
     }
 
     return ApiResponseHandler.error("Internal Server Error", 500);
@@ -212,11 +208,7 @@ async function deleteTag(request: NextRequest, user: JWTPayload) {
     });
 
     if (productsUsingTag > 0) {
-      return ApiResponseHandler.success({
-        message: `Tag cannot be deleted as it is being used by ${productsUsingTag} product(s)`,
-        success: false,
-        data: { productsCount: productsUsingTag }
-      }, 400);
+      return ApiResponseHandler.error(`Tag cannot be deleted as it is being used by ${productsUsingTag} product(s)`, 400);
     }
 
     await Tag.findByIdAndDelete(tagId);

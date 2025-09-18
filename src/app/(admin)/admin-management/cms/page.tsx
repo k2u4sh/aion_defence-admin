@@ -282,7 +282,7 @@ export default function CMSManagementPage() {
               <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                 <span>Items: {section.count}</span>
                 {section.lastUpdated && (
-                  <span>Updated: {new Date(section.lastUpdated).toLocaleDateString()}</span>
+                  <span>Updated: {new Date(section.lastUpdated).toISOString().split('T')[0]}</span>
                 )}
               </div>
               

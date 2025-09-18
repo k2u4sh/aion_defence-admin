@@ -93,7 +93,7 @@ const TagFormModal: React.FC<TagFormModalProps> = ({
       .replace(/[^a-z0-9 -]/g, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
-      .trim("-");
+      .replace(/^-+|-+$/g, "");
   };
 
   const handleNameChange = (name: string) => {
@@ -162,7 +162,6 @@ const TagFormModal: React.FC<TagFormModalProps> = ({
                   value={formData.name || ""}
                   onChange={(e) => handleNameChange(e.target.value)}
                   required
-                  maxLength={50}
                 />
               </div>
               <div>
@@ -286,13 +285,11 @@ const TagFormModal: React.FC<TagFormModalProps> = ({
               </div>
 
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.isActive || false}
-                    onChange={(checked) => handleInputChange("isActive", checked)}
-                  />
-                  <span className="text-sm">Active</span>
-                </label>
+                <Switch
+                  label="Active"
+                  defaultChecked={formData.isActive || false}
+                  onChange={(checked) => handleInputChange("isActive", checked)}
+                />
                 <p className="text-sm text-gray-500">
                   Inactive tags won't be available for selection
                 </p>
