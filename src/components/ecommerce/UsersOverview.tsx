@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Badge from "../ui/badge/Badge";
 import { formatNumber, formatDollar, formatDate } from "@/utils/formatters";
 import { 
@@ -14,21 +14,31 @@ import {
   MailIcon,
   PhoneIcon
 } from "@/icons";
+import Link from "next/link";
 
 interface User {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
   mobile?: string;
   companyName?: string;
-  role: 'admin' | 'user' | 'vendor' | 'customer';
+  role: 'admin' | 'user' | 'vendor' | 'customer' | 'seller' | 'buyer';
   status: 'active' | 'inactive' | 'pending' | 'blocked';
   isVerified: boolean;
   lastLogin?: string;
   createdAt: string;
-  totalOrders: number;
-  totalSpent: number;
+  totalOrders?: number;
+  totalSpent?: number;
+}
+
+interface DashboardData {
+  recent: {
+    users: User[];
+  };
+  statusBreakdown: {
+    users: Array<{ _id: string; count: number }>;
+  };
 }
 
 export const UsersOverview = () => {
@@ -36,122 +46,39 @@ export const UsersOverview = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - in real app, this would come from API
-  const getUsersData = (): User[] => {
-    const baseUsers: User[] = [
-      {
-        id: '1',
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'john.smith@email.com',
-        mobile: '+1 (555) 123-4567',
-        companyName: 'Tech Solutions Inc.',
-        role: 'customer',
-        status: 'active',
-        isVerified: true,
-        lastLogin: '2024-12-01T10:30:00Z',
-        createdAt: '2024-11-15',
-        totalOrders: 12,
-        totalSpent: 3456.78
-      },
-      {
-        id: '2',
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        email: 'sarah.j@email.com',
-        mobile: '+1 (555) 234-5678',
-        companyName: 'Digital Marketing Co.',
-        role: 'vendor',
-        status: 'active',
-        isVerified: true,
-        lastLogin: '2024-12-01T09:15:00Z',
-        createdAt: '2024-10-20',
-        totalOrders: 0,
-        totalSpent: 0
-      },
-      {
-        id: '3',
-        firstName: 'Mike',
-        lastName: 'Wilson',
-        email: 'mike.w@email.com',
-        mobile: '+1 (555) 345-6789',
-        role: 'customer',
-        status: 'active',
-        isVerified: true,
-        lastLogin: '2024-11-30T16:45:00Z',
-        createdAt: '2024-09-10',
-        totalOrders: 8,
-        totalSpent: 1899.99
-      },
-      {
-        id: '4',
-        firstName: 'Emily',
-        lastName: 'Davis',
-        email: 'emily.d@email.com',
-        mobile: '+1 (555) 456-7890',
-        companyName: 'Startup Ventures',
-        role: 'customer',
-        status: 'pending',
-        isVerified: false,
-        lastLogin: '2024-11-28T14:20:00Z',
-        createdAt: '2024-11-25',
-        totalOrders: 2,
-        totalSpent: 299.99
-      },
-      {
-        id: '5',
-        firstName: 'David',
-        lastName: 'Brown',
-        email: 'david.b@email.com',
-        mobile: '+1 (555) 567-8901',
-        role: 'admin',
-        status: 'active',
-        isVerified: true,
-        lastLogin: '2024-12-01T08:00:00Z',
-        createdAt: '2024-01-15',
-        totalOrders: 0,
-        totalSpent: 0
-      }
-    ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-    if (timeFilter === 'yearly') {
-      // Add more historical data for yearly view
-      return [
-        ...baseUsers,
-        {
-          id: '6',
-          firstName: 'Lisa',
-          lastName: 'Anderson',
-          email: 'lisa.a@email.com',
-          mobile: '+1 (555) 678-9012',
-          companyName: 'Global Enterprises',
-          role: 'customer',
-          status: 'active',
-          isVerified: true,
-          lastLogin: '2024-11-20T11:30:00Z',
-          createdAt: '2024-08-15',
-          totalOrders: 15,
-          totalSpent: 4234.56
-        },
-        {
-          id: '7',
-          firstName: 'Robert',
-          lastName: 'Taylor',
-          email: 'robert.t@email.com',
-          mobile: '+1 (555) 789-0123',
-          role: 'vendor',
-          status: 'inactive',
-          isVerified: true,
-          lastLogin: '2024-10-15T13:45:00Z',
-          createdAt: '2024-07-20',
-          totalOrders: 0,
-          totalSpent: 0
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/dashboard', {
+        headers: {
+          'Content-Type': 'application/json'
         }
-      ];
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setDashboardData(result.data);
+      } else {
+        setError(result.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      setError('Failed to fetch dashboard data');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return baseUsers;
+  const getUsersData = (): User[] => {
+    return dashboardData?.recent.users || [];
   };
 
   const getStatusColor = (status: string) => {
@@ -177,9 +104,9 @@ export const UsersOverview = () => {
   const filteredUsers = getUsersData().filter(user => {
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesSearch = user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesStatus && matchesRole && matchesSearch;
   });
@@ -187,7 +114,35 @@ export const UsersOverview = () => {
   const totalUsers = filteredUsers.length;
   const activeUsers = filteredUsers.filter(u => u.status === 'active').length;
   const verifiedUsers = filteredUsers.filter(u => u.isVerified).length;
-  const totalRevenue = filteredUsers.reduce((sum, user) => sum + user.totalSpent, 0);
+  const totalRevenue = filteredUsers.reduce((sum, user) => sum + (user.totalSpent || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <button 
+          onClick={fetchDashboardData}
+          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -307,7 +262,7 @@ export const UsersOverview = () => {
           </thead>
           <tbody className="bg-white dark:bg-white/[0.03] divide-y divide-gray-200 dark:divide-gray-800">
             {filteredUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
@@ -354,21 +309,21 @@ export const UsersOverview = () => {
                 </td>
                 <td className="px-6 py-4">
                   <Badge color={getRoleColor(user.role) as any}>
-                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    {user.role?.charAt(0).toUpperCase() + user.role?.slice(1) || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
                   <Badge color={getStatusColor(user.status)}>
-                    {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                    {user.status?.charAt(0).toUpperCase() + user.status?.slice(1) || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
                   <div className="space-y-1">
                     <div className="text-sm text-gray-900 dark:text-white">
-                      {user.totalOrders} orders
+                      {user.totalOrders || 0} orders
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatDollar(user.totalSpent)}
+                      {formatDollar(user.totalSpent || 0)}
                     </div>
                     {user.lastLogin && (
                       <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -379,12 +334,16 @@ export const UsersOverview = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                      <EyeIcon className="size-4" />
-                    </button>
-                    <button className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
-                      <EditIcon className="size-4" />
-                    </button>
+                    <Link href={`/admin-management/users/${user._id}`}>
+                      <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                        <EyeIcon className="size-4" />
+                      </button>
+                    </Link>
+                    <Link href={`/admin-management/users/${user._id}/edit`}>
+                      <button className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
+                        <EditIcon className="size-4" />
+                      </button>
+                    </Link>
                     <button className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
                       <TrashIcon className="size-4" />
                     </button>
@@ -400,9 +359,11 @@ export const UsersOverview = () => {
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <span>Showing {filteredUsers.length} users</span>
-          <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-            View All Users
-          </button>
+          <Link href="/admin-management/users">
+            <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              View All Users
+            </button>
+          </Link>
         </div>
       </div>
     </div>

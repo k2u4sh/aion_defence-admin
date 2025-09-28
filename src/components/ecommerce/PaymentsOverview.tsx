@@ -183,9 +183,9 @@ export const PaymentsOverview = () => {
   const filteredPayments = getPaymentsData().filter(payment => {
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
     const matchesMethod = methodFilter === 'all' || payment.paymentMethod === methodFilter;
-    const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.orderNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = payment.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesMethod && matchesSearch;
   });
 
@@ -360,13 +360,13 @@ export const PaymentsOverview = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{getMethodIcon(payment.paymentMethod)}</span>
                     <Badge color={getMethodColor(payment.paymentMethod) as any}>
-                      {payment.paymentMethod.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {payment.paymentMethod?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown'}
                     </Badge>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <Badge color={getStatusColor(payment.status)}>
-                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                    {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">

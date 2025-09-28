@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusIcon, EditIcon, TrashIcon, EyeIcon, FilterIcon, BoxIcon, CheckCircleIcon, AlertTriangleIcon } from "@/icons";
+import { PlusIcon, EditIcon, TrashIcon, EyeIcon, FilterIcon, BoxIcon, CheckCircleIcon, AlertTriangleIcon, DownloadIcon, UploadIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
 import CategoryFormModal from "@/components/categories/CategoryFormModal";
+import CategoryImportExportModal from "@/components/categories/CategoryImportExportModal";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
@@ -68,6 +69,7 @@ const CategoriesPage = () => {
   // Modals
   const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
   const { isOpen: isCategoryModalOpen, openModal: openCategoryModal, closeModal: closeCategoryModal } = useModal();
+  const { isOpen: isImportExportModalOpen, openModal: openImportExportModal, closeModal: closeImportExportModal } = useModal();
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
@@ -144,6 +146,10 @@ const CategoriesPage = () => {
     openCategoryModal();
   };
 
+  const handleOpenImportExportModal = () => {
+    openImportExportModal();
+  };
+
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("");
@@ -187,10 +193,16 @@ const CategoriesPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Category Management</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage product categories and subcategories</p>
         </div>
-        <Button onClick={openAddCategoryModal} className="flex items-center gap-2">
-          <PlusIcon className="h-4 w-4" />
-          Add Category
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleOpenImportExportModal} variant="outline" className="flex items-center gap-2">
+            <UploadIcon className="h-4 w-4" />
+            Import/Export
+          </Button>
+          <Button onClick={openAddCategoryModal} className="flex items-center gap-2">
+            <PlusIcon className="h-4 w-4" />
+            Add Category
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -444,6 +456,13 @@ const CategoriesPage = () => {
         onConfirm={handleDeleteCategory}
         title="Delete Category"
         message="Are you sure you want to delete this category? This action cannot be undone."
+      />
+
+      {/* Import/Export Modal */}
+      <CategoryImportExportModal
+        isOpen={isImportExportModalOpen}
+        onClose={closeImportExportModal}
+        onImportComplete={() => { closeImportExportModal(); fetchCategories(); }}
       />
     </div>
   );

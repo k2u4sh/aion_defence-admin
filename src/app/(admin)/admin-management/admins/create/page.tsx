@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Role = { role: string; defaultPermissions: string[] };
+type Role = { _id: string; key: string; name: string; description?: string; permissions: string[] };
 type Group = { _id: string; name: string };
 
 export default function CreateAdminPage() {
@@ -82,7 +82,7 @@ export default function CreateAdminPage() {
         <div>
           <label className="block text-sm mb-1">Role</label>
           <select className="w-full border rounded px-3 py-2" value={role} onChange={e=>setRole(e.target.value)}>
-            {roles.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
+            {roles.map(r => <option key={r._id} value={r.key}>{r.name}</option>)}
           </select>
         </div>
         <div>

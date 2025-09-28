@@ -38,13 +38,24 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = { deletedAt: null };
+    const query: any = { 
+      $and: [
+        {
+          $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } }
+          ]
+        }
+      ]
+    };
     
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
+      query.$and.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } }
+        ]
+      });
     }
 
     if (status) {
@@ -71,7 +82,14 @@ export async function GET(request: NextRequest) {
 
     // Get tag statistics
     const stats = await Tag.aggregate([
-      { $match: { deletedAt: null } },
+      { 
+        $match: { 
+          $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } }
+          ]
+        } 
+      },
       {
         $group: {
           _id: null,

@@ -63,6 +63,10 @@ const tagSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -76,6 +80,7 @@ tagSchema.index({ slug: 1 });
 tagSchema.index({ isActive: 1, sortOrder: 1 });
 tagSchema.index({ category: 1, isActive: 1 });
 tagSchema.index({ 'metadata.totalProducts': -1 });
+tagSchema.index({ deletedAt: 1 });
 
 // Create slug from name before saving
 tagSchema.pre('save', function(next) {
@@ -100,7 +105,7 @@ tagSchema.virtual('productsCount', {
 
 // Static method to get popular tags
 tagSchema.statics.getPopularTags = function(limit = 10, categoryId = null) {
-  const query = { isActive: true };
+  const query = { isActive: true, deletedAt: null };
   if (categoryId) {
     query.$or = [
       { category: categoryId },
@@ -120,7 +125,8 @@ tagSchema.statics.getTagsByCategory = function(categoryId) {
       { category: categoryId },
       { category: null } // Include global tags
     ],
-    isActive: true
+    isActive: true,
+    deletedAt: null
   }).sort({ sortOrder: 1, name: 1 });
 };
 
@@ -159,10 +165,13 @@ tagSchema.statics.updateProductCounts = async function() {
 
 // Static method to clean unused tags
 tagSchema.statics.cleanUnusedTags = function() {
-  return this.deleteMany({
+  return this.updateMany({
     'metadata.totalProducts': 0,
     isSystem: false,
+    deletedAt: null,
     'metadata.lastUsed': { $lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } // 90 days ago
+  }, {
+    deletedAt: new Date()
   });
 };
 

@@ -1,4 +1,4 @@
-import { connectDB } from "@/utils/db";
+import { connectToDatabase as connectDB } from "@/lib/db";
 import { NextRequest } from "next/server";
 import { ApiResponseHandler } from "@/utils/apiResponse";
 import { requirePermission } from "@/utils/adminAccess";

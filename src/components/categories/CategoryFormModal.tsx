@@ -40,6 +40,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   categories
 }) => {
   const [loading, setLoading] = useState(false);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState<Partial<Category>>({
     name: "",
     description: "",
@@ -62,8 +63,24 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       } else {
         resetForm();
       }
+      fetchAllCategories();
     }
   }, [isOpen, category]);
+
+  const fetchAllCategories = async () => {
+    try {
+      const response = await fetch("/api/admin/categories?limit=100");
+      const data = await response.json();
+      if (data.success) {
+        console.log("Fetched categories for parent dropdown:", data.data.length);
+        setAllCategories(data.data);
+      } else {
+        console.error("Failed to fetch categories:", data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -106,9 +123,14 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   };
 
   const getAvailableParentCategories = () => {
-    if (!category) return categories;
+    if (!category) {
+      console.log("Available parent categories (new category):", allCategories.length);
+      return allCategories;
+    }
     // Filter out the current category and its descendants to prevent circular references
-    return categories.filter(cat => cat._id !== category._id);
+    const filtered = allCategories.filter(cat => cat._id !== category._id);
+    console.log("Available parent categories (edit category):", filtered.length);
+    return filtered;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -208,7 +230,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   onChange={(e) => {
                     const parentId = e.target.value;
                     if (parentId) {
-                      const parent = categories.find(cat => cat._id === parentId);
+                      const parent = allCategories.find(cat => cat._id === parentId);
                       handleInputChange("parentCategory", parent);
                     } else {
                       handleInputChange("parentCategory", undefined);
@@ -217,13 +239,11 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">No Parent (Root Category)</option>
-                  {getAvailableParentCategories()
-                    .filter(cat => !cat.parentCategory) // Only show root categories as potential parents
-                    .map(cat => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.name}
-                      </option>
-                    ))}
+                  {getAvailableParentCategories().map(cat => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   Leave empty to create a root category

@@ -5,6 +5,7 @@ import User from "@/models/userModel";
 import Category from "@/models/categoryModel";
 import Tag from "@/models/tagModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
+import mongoose from "mongoose";
 
 // Ensure models are registered
 const ensureModelsRegistered = () => {
@@ -13,6 +14,11 @@ const ensureModelsRegistered = () => {
   Category;
   Tag;
   Product;
+};
+
+// Helper function to validate ObjectId
+const isValidObjectId = (id: string): boolean => {
+  return mongoose.Types.ObjectId.isValid(id);
 };
 
 // GET /api/admin/products - Get all products with pagination and filters
@@ -47,6 +53,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
+
     // Build query
     const query: any = { deletedAt: null };
     
@@ -64,15 +71,45 @@ export async function GET(request: NextRequest) {
     }
 
     if (category) {
-      query.category = category;
+      if (isValidObjectId(category)) {
+        query.category = category;
+      } else {
+        // If it's not a valid ObjectId, search by category name
+        const categoryDoc = await Category.findOne({ name: { $regex: category, $options: "i" } });
+        if (categoryDoc) {
+          query.category = categoryDoc._id;
+        }
+      }
     }
 
     if (subCategory) {
-      query.subCategory = subCategory;
+      if (isValidObjectId(subCategory)) {
+        query.subCategory = subCategory;
+      } else {
+        // If it's not a valid ObjectId, search by subcategory name
+        const subCategoryDoc = await Category.findOne({ name: { $regex: subCategory, $options: "i" } });
+        if (subCategoryDoc) {
+          query.subCategory = subCategoryDoc._id;
+        }
+      }
     }
 
     if (seller) {
-      query.seller = seller;
+      if (isValidObjectId(seller)) {
+        query.seller = seller;
+      } else {
+        // If it's not a valid ObjectId, search by seller name or company
+        const sellerDoc = await User.findOne({
+          $or: [
+            { firstName: { $regex: seller, $options: "i" } },
+            { lastName: { $regex: seller, $options: "i" } },
+            { companyName: { $regex: seller, $options: "i" } }
+          ]
+        });
+        if (sellerDoc) {
+          query.seller = sellerDoc._id;
+        }
+      }
     }
 
     if (minPrice) {
@@ -106,6 +143,7 @@ export async function GET(request: NextRequest) {
     const sort: any = {};
     sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
+
     // Calculate skip value
     const skip = (page - 1) * limit;
 
@@ -113,13 +151,38 @@ export async function GET(request: NextRequest) {
     const products = await Product.find(query)
       .populate("category", "name")
       .populate("subCategory", "name")
-      .populate("tags", "name color")
       .populate("seller", "firstName lastName companyName")
       .populate("supplier", "firstName lastName companyName")
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean();
+
+    // Manually populate tags with error handling
+    const productsWithTags = await Promise.all(
+      products.map(async (product) => {
+        if (product.tags && Array.isArray(product.tags)) {
+          const validTagIds = product.tags.filter(tagId => 
+            typeof tagId === 'string' && isValidObjectId(tagId)
+          );
+          
+          if (validTagIds.length > 0) {
+            try {
+              const tags = await Tag.find({ _id: { $in: validTagIds } })
+                .select('name color')
+                .lean();
+              product.tags = tags as any;
+            } catch (error) {
+              console.warn('Error populating tags for product:', product._id, error);
+              product.tags = [];
+            }
+          } else {
+            product.tags = [];
+          }
+        }
+        return product;
+      })
+    );
 
     // Get total count
     const total = await Product.countDocuments(query);
@@ -132,7 +195,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        products,
+        products: productsWithTags,
         pagination: {
           page,
           limit,
@@ -144,8 +207,22 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching products:", error);
+    
+    // Log more detailed error information
+    if (error.name === 'BSONError' || error.message?.includes('ObjectId')) {
+      console.error("ObjectId validation error:", {
+        message: error.message,
+        value: error.value,
+        path: error.path
+      });
+      return NextResponse.json(
+        { success: false, message: "Invalid ID format provided" },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { success: false, message: "Failed to fetch products" },
       { status: 500 }

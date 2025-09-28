@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Badge from "../ui/badge/Badge";
 import { formatDollar } from "@/utils/formatters";
 import { 
@@ -10,20 +10,36 @@ import {
   TrashIcon
 } from "@/icons";
 import Image from "next/image";
+import Link from "next/link";
 
 interface Product {
-  id: string;
+  _id: string;
   name: string;
   sku: string;
-  category: string;
-  price: number;
+  category: {
+    _id: string;
+    name: string;
+  };
+  basePrice: number;
   comparePrice?: number;
   quantity: number;
   status: 'active' | 'inactive' | 'draft' | 'archived';
-  image: string;
-  rating: number;
-  totalReviews: number;
+  images: Array<{
+    url: string;
+    alt: string;
+  }>;
+  rating?: number;
+  totalReviews?: number;
   createdAt: string;
+}
+
+interface DashboardData {
+  recent: {
+    products: Product[];
+  };
+  statusBreakdown: {
+    products: Array<{ _id: string; count: number }>;
+  };
 }
 
 export const ProductsOverview = () => {
@@ -31,112 +47,39 @@ export const ProductsOverview = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - in real app, this would come from API
-  const getProductsData = (): Product[] => {
-    const baseProducts: Product[] = [
-      {
-        id: '1',
-        name: 'MacBook Pro 13"',
-        sku: 'MBP-13-001',
-        category: 'Laptop',
-        price: 2399.00,
-        comparePrice: 2599.00,
-        quantity: 45,
-        status: 'active',
-        image: '/images/product/product-01.jpg',
-        rating: 4.8,
-        totalReviews: 156,
-        createdAt: '2024-12-01'
-      },
-      {
-        id: '2',
-        name: 'Apple Watch Ultra',
-        sku: 'AWU-001',
-        category: 'Watch',
-        price: 879.00,
-        quantity: 23,
-        status: 'active',
-        image: '/images/product/product-02.jpg',
-        rating: 4.6,
-        totalReviews: 89,
-        createdAt: '2024-11-28'
-      },
-      {
-        id: '3',
-        name: 'iPhone 15 Pro Max',
-        sku: 'IP15PM-001',
-        category: 'SmartPhone',
-        price: 1869.00,
-        quantity: 67,
-        status: 'active',
-        image: '/images/product/product-03.jpg',
-        rating: 4.9,
-        totalReviews: 234,
-        createdAt: '2024-11-25'
-      },
-      {
-        id: '4',
-        name: 'iPad Pro 3rd Gen',
-        sku: 'IPP3-001',
-        category: 'Electronics',
-        price: 1699.00,
-        quantity: 12,
-        status: 'inactive',
-        image: '/images/product/product-04.jpg',
-        rating: 4.7,
-        totalReviews: 78,
-        createdAt: '2024-11-20'
-      },
-      {
-        id: '5',
-        name: 'AirPods Pro 2nd Gen',
-        sku: 'APP2-001',
-        category: 'Accessories',
-        price: 240.00,
-        quantity: 89,
-        status: 'active',
-        image: '/images/product/product-05.jpg',
-        rating: 4.5,
-        totalReviews: 123,
-        createdAt: '2024-11-18'
-      }
-    ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-    if (timeFilter === 'yearly') {
-      // Add more historical data for yearly view
-      return [
-        ...baseProducts,
-        {
-          id: '6',
-          name: 'MacBook Air M2',
-          sku: 'MBA-M2-001',
-          category: 'Laptop',
-          price: 1899.00,
-          quantity: 34,
-          status: 'active',
-          image: '/images/product/product-06.jpg',
-          rating: 4.7,
-          totalReviews: 92,
-          createdAt: '2024-10-15'
-        },
-        {
-          id: '7',
-          name: 'Samsung Galaxy S24',
-          sku: 'SGS24-001',
-          category: 'SmartPhone',
-          price: 1299.00,
-          quantity: 56,
-          status: 'active',
-          image: '/images/product/product-07.jpg',
-          rating: 4.6,
-          totalReviews: 145,
-          createdAt: '2024-09-20'
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/dashboard', {
+        headers: {
+          'Content-Type': 'application/json'
         }
-      ];
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setDashboardData(result.data);
+      } else {
+        setError(result.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      setError('Failed to fetch dashboard data');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return baseProducts;
+  const getProductsData = (): Product[] => {
+    return dashboardData?.recent.products || [];
   };
 
   const getStatusColor = (status: string) => {
@@ -157,15 +100,43 @@ export const ProductsOverview = () => {
 
   const filteredProducts = getProductsData().filter(product => {
     const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || product.category?.name === categoryFilter;
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesCategory && matchesSearch;
   });
 
   const totalProducts = filteredProducts.length;
   const activeProducts = filteredProducts.filter(p => p.status === 'active').length;
-  const totalValue = filteredProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0);
+  const totalValue = filteredProducts.reduce((sum, product) => sum + (product.basePrice * product.quantity), 0);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <button 
+          onClick={fetchDashboardData}
+          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -287,17 +258,21 @@ export const ProductsOverview = () => {
           <tbody className="bg-white dark:bg-white/[0.03] divide-y divide-gray-200 dark:divide-gray-800">
             {filteredProducts.map((product) => {
               const stockStatus = getStockStatus(product.quantity);
+              const productImage = product.images?.[0]?.url || '/images/placeholder-product.jpg';
               return (
-                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-[50px] w-[50px] overflow-hidden rounded-md">
+                      <div className="h-[50px] w-[50px] overflow-hidden rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                         <Image
                           width={50}
                           height={50}
-                          src={product.image}
+                          src={productImage}
                           className="h-[50px] w-[50px] object-cover"
                           alt={product.name}
+                          onError={(e) => {
+                            e.currentTarget.src = '/images/placeholder-product.jpg';
+                          }}
                         />
                       </div>
                       <div>
@@ -305,7 +280,7 @@ export const ProductsOverview = () => {
                           {product.name}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          ⭐ {product.rating} ({product.totalReviews} reviews)
+                          {product.rating ? `⭐ ${product.rating} (${product.totalReviews || 0} reviews)` : 'No reviews yet'}
                         </div>
                       </div>
                     </div>
@@ -317,13 +292,13 @@ export const ProductsOverview = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {product.category}
+                      {product.category?.name || '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatDollar(product.price)}
+                        {formatDollar(product.basePrice)}
                       </div>
                       {product.comparePrice && (
                         <div className="text-xs text-gray-400 line-through">
@@ -344,17 +319,21 @@ export const ProductsOverview = () => {
                   </td>
                   <td className="px-6 py-4">
                     <Badge color={getStatusColor(product.status)}>
-                      {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                      {product.status?.charAt(0).toUpperCase() + product.status?.slice(1) || 'Unknown'}
                     </Badge>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                        <EyeIcon className="size-4" />
-                      </button>
-                      <button className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
-                        <EditIcon className="size-4" />
-                      </button>
+                      <Link href={`/admin-management/products/${product._id}`}>
+                        <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                          <EyeIcon className="size-4" />
+                        </button>
+                      </Link>
+                      <Link href={`/admin-management/products/${product._id}/edit`}>
+                        <button className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
+                          <EditIcon className="size-4" />
+                        </button>
+                      </Link>
                       <button className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
                         <TrashIcon className="size-4" />
                       </button>
@@ -371,9 +350,11 @@ export const ProductsOverview = () => {
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <span>Showing {filteredProducts.length} products</span>
-          <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-            View All Products
-          </button>
+          <Link href="/admin-management/products">
+            <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              View All Products
+            </button>
+          </Link>
         </div>
       </div>
     </div>

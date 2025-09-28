@@ -11,7 +11,7 @@ const roleSchema = new mongoose.Schema({
   permissions: { type: [String], default: [] }
 }, { timestamps: true });
 
-roleSchema.index({ key: 1 }, { unique: true });
+// Index is already defined in the schema with unique: true, so no need for separate index
 
 const Role = mongoose.model("Role", roleSchema);
 export default Role;

@@ -67,7 +67,7 @@ interface Category {
   _id: string;
   name: string;
   level: number;
-  parentCategory?: string;
+  parentCategory?: string | { _id: string; name: string; level: number };
 }
 
 interface Tag {
@@ -199,14 +199,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchCategories();
-      fetchTags();
-      fetchSellers();
-      if (product) {
-        setFormData(normalizeProduct(product));
-      } else {
-        resetForm();
-      }
+      const initializeModal = async () => {
+        await Promise.all([
+          fetchCategories(),
+          fetchTags(),
+          fetchSellers()
+        ]);
+        
+        if (product) {
+          setFormData(normalizeProduct(product));
+        } else {
+          resetForm();
+        }
+      };
+      
+      initializeModal();
     }
   }, [isOpen, product]);
 
@@ -215,8 +222,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const response = await fetch("/api/admin/categories?limit=100");
       const data = await response.json();
       if (data.success) {
-        setCategories(data.data?.categories || []);
+        const categoriesData = data.data || [];
+        setCategories(categoriesData);
       } else {
+        console.error("Failed to fetch categories:", data.message);
         setCategories([]);
       }
     } catch (error) {
@@ -230,7 +239,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const response = await fetch("/api/admin/tags?limit=100");
       const data = await response.json();
       if (data.success) {
-        setTags(data.data?.tags || []);
+        setTags(data.data || []);
       } else {
         setTags([]);
       }
@@ -432,9 +441,22 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const getSubCategories = () => {
     if (!formData.category) return [] as Category[];
     const list = categories || [];
+    
     const parentCategory = list.find(cat => cat._id === formData.category);
     if (!parentCategory) return [] as Category[];
-    return list.filter(cat => cat.parentCategory === formData.category);
+    
+    const subCategories = list.filter(cat => {
+      if (!cat.parentCategory) return false;
+      
+      // Handle both populated and non-populated parentCategory
+      const parentId = typeof cat.parentCategory === 'object' 
+        ? cat.parentCategory._id 
+        : cat.parentCategory;
+      
+      return parentId === formData.category;
+    });
+    
+    return subCategories;
   };
 
   return (

@@ -2,14 +2,16 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-type Admin = {
-  _id: string;
-  firstName: string;
-  lastName: string;
+type Admin = { 
+  _id: string; 
+  firstName: string; 
+  lastName: string; 
   email: string;
   role: string;
   isActive?: boolean;
 };
+
+type Role = { _id: string; key: string; name: string; description?: string; permissions: string[] };
 
 export default function EditAdminPage() {
   const params = useParams<{ id: string }>();
@@ -20,6 +22,7 @@ export default function EditAdminPage() {
   const [role, setRole] = useState("admin");
   const [isActive, setIsActive] = useState(true);
   const [password, setPassword] = useState("");
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +32,19 @@ export default function EditAdminPage() {
     async function load() {
       try {
         const token = localStorage.getItem('accessToken');
-        const res = await fetch(`/api/admin/${params.id}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        const data = await res.json();
-        if (!res.ok || !data?.success) throw new Error(data?.message || 'Failed to load admin');
-        const a: Admin = data.data;
+        const [adminRes, rolesRes] = await Promise.all([
+          fetch(`/api/admin/${params.id}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          }),
+          fetch('/api/admin/roles', {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
+        ]);
+        const adminData = await adminRes.json();
+        const rolesData = await rolesRes.json();
+        if (!adminRes.ok || !adminData?.success) throw new Error(adminData?.message || 'Failed to load admin');
+        if (rolesRes.ok && rolesData?.success) setRoles(rolesData.data || []);
+        const a: Admin = adminData.data;
         if (!cancelled) {
           setAdmin(a);
           setFirstName(a.firstName);
@@ -128,10 +138,7 @@ export default function EditAdminPage() {
         <div>
           <label className="block text-sm mb-1">Role</label>
           <select className="w-full border rounded px-3 py-2" value={role} onChange={e=>setRole(e.target.value)}>
-            <option value="super_admin">super_admin</option>
-            <option value="admin">admin</option>
-            <option value="moderator">moderator</option>
-            <option value="support">support</option>
+            {roles.map(r => <option key={r._id} value={r.key}>{r.name}</option>)}
           </select>
         </div>
         <label className="inline-flex items-center gap-2 text-sm">

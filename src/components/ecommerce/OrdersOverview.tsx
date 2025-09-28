@@ -6,119 +6,86 @@ import {
   SearchIcon,
   EyeIcon
 } from "@/icons";
+import Link from "next/link";
+import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 
 interface Order {
-  id: string;
+  _id: string;
   orderNumber: string;
-  customerName: string;
-  customerEmail: string;
+  buyer: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
   totalAmount: number;
-  orderStatus: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  orderDate: string;
-  items: number;
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  payment?: {
+    status: 'pending' | 'paid' | 'failed' | 'refunded';
+  };
+  createdAt: string;
+  items: Array<{
+    product: {
+      _id: string;
+      name: string;
+      sku: string;
+    };
+    quantity: number;
+  }>;
+}
+
+interface DashboardData {
+  recent: {
+    orders: Order[];
+  };
+  statusBreakdown: {
+    orders: Array<{ _id: string; count: number }>;
+  };
 }
 
 export const OrdersOverview = () => {
-  const [mounted, setMounted] = useState(false);
-  const [timeFilter, setTimeFilter] = useState<'monthly' | 'yearly'>('monthly');
+  const { filters, updatePeriod } = useDashboardFilters();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    fetchDashboardData();
+  }, [filters]);
 
-  // Mock data - in real app, this would come from API
-  const getOrdersData = (): Order[] => {
-    const baseOrders: Order[] = [
-      {
-        id: '1',
-        orderNumber: 'ORD-20241201-0001',
-        customerName: 'John Smith',
-        customerEmail: 'john.smith@email.com',
-        totalAmount: 1299.99,
-        orderStatus: 'delivered',
-        paymentStatus: 'paid',
-        orderDate: '2024-12-01',
-        items: 3
-      },
-      {
-        id: '2',
-        orderNumber: 'ORD-20241201-0002',
-        customerName: 'Sarah Johnson',
-        customerEmail: 'sarah.j@email.com',
-        totalAmount: 879.00,
-        orderStatus: 'processing',
-        paymentStatus: 'paid',
-        orderDate: '2024-12-01',
-        items: 1
-      },
-      {
-        id: '3',
-        orderNumber: 'ORD-20241201-0003',
-        customerName: 'Mike Wilson',
-        customerEmail: 'mike.w@email.com',
-        totalAmount: 1869.00,
-        orderStatus: 'shipped',
-        paymentStatus: 'paid',
-        orderDate: '2024-12-01',
-        items: 2
-      },
-      {
-        id: '4',
-        orderNumber: 'ORD-20241130-0001',
-        customerName: 'Emily Davis',
-        customerEmail: 'emily.d@email.com',
-        totalAmount: 1699.00,
-        orderStatus: 'pending',
-        paymentStatus: 'pending',
-        orderDate: '2024-11-30',
-        items: 1
-      },
-      {
-        id: '5',
-        orderNumber: 'ORD-20241130-0002',
-        customerName: 'David Brown',
-        customerEmail: 'david.b@email.com',
-        totalAmount: 240.00,
-        orderStatus: 'cancelled',
-        paymentStatus: 'refunded',
-        orderDate: '2024-11-30',
-        items: 1
-      }
-    ];
-
-    if (timeFilter === 'yearly') {
-      // Add more historical data for yearly view
-      return [
-        ...baseOrders,
-        {
-          id: '6',
-          orderNumber: 'ORD-20241115-0001',
-          customerName: 'Lisa Anderson',
-          customerEmail: 'lisa.a@email.com',
-          totalAmount: 899.00,
-          orderStatus: 'delivered',
-          paymentStatus: 'paid',
-          orderDate: '2024-11-15',
-          items: 2
-        },
-        {
-          id: '7',
-          orderNumber: 'ORD-20241020-0001',
-          customerName: 'Robert Taylor',
-          customerEmail: 'robert.t@email.com',
-          totalAmount: 1599.00,
-          orderStatus: 'delivered',
-          paymentStatus: 'paid',
-          orderDate: '2024-10-20',
-          items: 1
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        period: filters.period,
+        year: filters.year.toString(),
+        month: filters.month.toString()
+      });
+      
+      const response = await fetch(`/api/admin/dashboard?${params}`, {
+        headers: {
+          'Content-Type': 'application/json'
         }
-      ];
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setDashboardData(result.data);
+      } else {
+        setError(result.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      setError('Failed to fetch dashboard data');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return baseOrders;
+  const getOrdersData = (): Order[] => {
+    return dashboardData?.recent.orders || [];
   };
 
   const getStatusColor = (status: string) => {
@@ -143,16 +110,18 @@ export const OrdersOverview = () => {
   };
 
   const filteredOrders = getOrdersData().filter(order => {
-    const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter;
-    const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesSearch = order.buyer?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.buyer?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.buyer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
   const totalOrders = filteredOrders.length;
 
-  if (!mounted) {
+  if (loading) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="p-6">
@@ -162,6 +131,20 @@ export const OrdersOverview = () => {
             <div className="h-64 bg-gray-200 rounded"></div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <button 
+          onClick={fetchDashboardData}
+          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline"
+        >
+          Try again
+        </button>
       </div>
     );
   }
@@ -183,9 +166,9 @@ export const OrdersOverview = () => {
             {/* Time Filter */}
             <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
-                onClick={() => setTimeFilter('monthly')}
+                onClick={() => updatePeriod('monthly')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  timeFilter === 'monthly'
+                  filters.period === 'monthly'
                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
@@ -193,9 +176,9 @@ export const OrdersOverview = () => {
                 Monthly
               </button>
               <button
-                onClick={() => setTimeFilter('yearly')}
+                onClick={() => updatePeriod('yearly')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  timeFilter === 'yearly'
+                  filters.period === 'yearly'
                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
@@ -260,27 +243,27 @@ export const OrdersOverview = () => {
           </thead>
           <tbody className="bg-white dark:bg-white/[0.03] divide-y divide-gray-200 dark:divide-gray-800">
             {filteredOrders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="px-6 py-4">
                   <div>
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {order.orderNumber}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(order.orderDate)}
+                      {formatDate(order.createdAt)}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">
-                      {order.items} item{order.items !== 1 ? 's' : ''}
+                      {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div>
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {order.customerName}
+                      {order.buyer?.firstName} {order.buyer?.lastName}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {order.customerEmail}
+                      {order.buyer?.email}
                     </div>
                   </div>
                 </td>
@@ -290,19 +273,21 @@ export const OrdersOverview = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge color={getStatusColor(order.orderStatus)}>
-                    {order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
+                  <Badge color={getStatusColor(order.status)}>
+                    {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge color={getPaymentStatusColor(order.paymentStatus)}>
-                    {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  <Badge color={getPaymentStatusColor(order.payment?.status || 'pending')}>
+                    {order.payment?.status ? (order.payment.status.charAt(0).toUpperCase() + order.payment.status.slice(1)) : 'Unknown'}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
-                  <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                    <EyeIcon className="size-5" />
-                  </button>
+                  <Link href={`/admin-management/orders/${order._id}`}>
+                    <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                      <EyeIcon className="size-5" />
+                    </button>
+                  </Link>
                 </td>
               </tr>
             ))}
@@ -314,9 +299,11 @@ export const OrdersOverview = () => {
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <span>Showing {filteredOrders.length} orders</span>
-          <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-            View All Orders
-          </button>
+          <Link href="/admin-management/orders">
+            <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              View All Orders
+            </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
-import AdminGroup from "@/models/adminGroupModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
+
+// Ensure models are registered
+const ensureModelsRegistered = () => {
+  // These imports will register the models with Mongoose
+  require("@/models/adminGroupModel");
+};
 
 // GET /api/admin/groups - Get all admin groups with pagination and filters
 export async function GET(request: NextRequest) {
@@ -16,6 +21,12 @@ export async function GET(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
+    // Get the AdminGroup model
+    const AdminGroup = require("@/models/adminGroupModel").default;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -63,16 +74,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: {
-        groups,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNextPage,
-          hasPrevPage
-        }
+      data: groups,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage,
+        hasPrevPage
       }
     });
 
@@ -98,6 +107,12 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Ensure models are registered
+    ensureModelsRegistered();
+    
+    // Get the AdminGroup model
+    const AdminGroup = require("@/models/adminGroupModel").default;
 
     const body = await request.json();
     const adminId = authCheck.admin?._id;

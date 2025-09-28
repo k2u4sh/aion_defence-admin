@@ -123,6 +123,42 @@ const bidSchema = new mongoose.Schema({
     }]
   }],
   
+  // Single Seller Response (for backward compatibility)
+  sellerResponse: {
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    },
+    respondedAt: {
+      type: Date,
+      default: Date.now
+    },
+    quotedPrice: {
+      type: Number,
+      min: 0
+    },
+    estimatedDelivery: {
+      type: String,
+      trim: true
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Response notes cannot exceed 1000 characters']
+    },
+    attachments: [{
+      url: String,
+      originalName: String,
+      fileType: String,
+      fileSize: Number
+    }]
+  },
+  
   // Comments/Communication
   comments: [bidCommentSchema],
   

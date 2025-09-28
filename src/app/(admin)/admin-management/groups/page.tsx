@@ -2,9 +2,18 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
-import { TrashBinIcon } from "@/icons";
+import { TrashBinIcon, PlusIcon, EditIcon } from "@/icons";
+import Badge from "@/components/ui/badge/Badge";
+import Button from "@/components/ui/button/Button";
 
-type Group = { _id: string; name: string; description?: string };
+type Group = { 
+  _id: string; 
+  name: string; 
+  description?: string;
+  permissions?: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -38,32 +47,106 @@ export default function GroupsPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Groups</h1>
-        <Link href="/admin-management/groups/create" className="px-3 py-1.5 rounded bg-black text-white text-sm">Create Group</Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Group Management</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage admin groups and their permissions</p>
+        </div>
+        <Link href="/admin-management/groups/create">
+          <Button className="flex items-center gap-2">
+            <PlusIcon className="h-4 w-4" />
+            Create Group
+          </Button>
+        </Link>
       </div>
-      {loading ? <p>Loading...</p> : error ? <p className="text-red-600 text-sm">{error}</p> : (
-        <ul className="space-y-2">
-          {groups.map(g => (
-            <li key={g._id} className="border rounded p-3 flex items-center justify-between">
-              <div>
-                <div className="font-medium">{g.name}</div>
-                {g.description ? <div className="text-sm text-gray-600">{g.description}</div> : null}
-              </div>
-              <div className="flex items-center gap-3">
-                <Link href={`/admin-management/groups/${g._id}`} className="text-blue-600 hover:underline text-sm">Edit</Link>
-                <button
-                  title="Delete group"
-                  onClick={() => { setSelectedId(g._id); setActionError(null); setShowDelete(true); }}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-red-50 dark:hover:bg-white/5"
-                >
-                  <TrashBinIcon width={18} height={18} />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-gray-500">Loading groups...</div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Group Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Permissions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {groups.map((group) => (
+                  <tr key={group._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Badge color="info">
+                          {group.name}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {group.description || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex flex-wrap gap-1">
+                        {group.permissions && group.permissions.length > 0 ? (
+                          <>
+                            {group.permissions.slice(0, 3).map((permission, index) => (
+                              <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                {permission}
+                              </span>
+                            ))}
+                            {group.permissions.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                                +{group.permissions.length - 3} more
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-gray-400">No permissions</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/admin-management/groups/${group._id}`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-1">
+                            <EditIcon className="h-3 w-3" />
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          onClick={() => { setSelectedId(group._id); setActionError(null); setShowDelete(true); }}
+                        >
+                          <TrashBinIcon className="h-3 w-3" />
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       <DeleteConfirmModal
