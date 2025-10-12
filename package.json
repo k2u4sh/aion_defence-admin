@@ -17,6 +17,8 @@
     "seed:orders": "node scripts/seed-orders.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.908.0",
+    "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
@@ -35,11 +37,13 @@
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "commander": "^12.0.0",
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.2.3",
     "flatpickr": "^4.6.13",
     "framer-motion": "^12.23.12",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
+    "multer": "^2.0.2",
+    "multer-s3": "^3.0.1",
     "next": "^15.4.6",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",

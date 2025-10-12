@@ -9,53 +9,92 @@ import Label from "@/components/form/Label";
 import Switch from "@/components/form/switch/Switch";
 import Checkbox from "@/components/form/input/Checkbox";
 import { PlusIcon, TrashIcon, UploadIcon } from "@/icons";
+import { uploadService } from "@/utils/uploadService";
 
 interface Product {
   _id: string;
+  slug?: string;
   name: string;
-  slug: string;
   description: string;
-  shortDescription?: string;
-  category: string;
-  subCategory?: string;
-  seller?: string;
-  supplier?: string;
-  tags: string[];
+  category: string | { _id: string; name: string };
+  subCategory?: string | { _id: string; name: string };
+  currency: string;
   basePrice: number;
+  images?: Array<string | { url?: string; alt?: string; isPrimary?: boolean; order?: number }>;
+  videos?: Array<string | { url?: string; title?: string; description?: string }>;
+  seller?: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+  };
+  tags?: string[] | Array<{ _id: string; name: string; color: string }>;
+  weight?: number;
+  pricing?: {
+    basePrice: number;
+    currency: string;
+  };
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+  stockType?: string;
+  reviews?: Array<{
+    rating: number;
+    comment: string;
+    user: string;
+  }>;
+  // Additional fields from ProductService
+  title?: string;
+  productHeading?: string;
+  productDescription?: string;
+  makeModel?: string;
+  materialType?: string;
+  unitsAvailable?: string;
+  daysToCompleteOrder?: string;
+  quantityPerOrder?: string;
+  certificationType?: string;
+  defenseCertification?: string;
+  registrationNumber?: string;
+  restrictedBuyerAccess?: string;
+  productWarranty?: string;
+  certificationDocs?: Array<{
+    url: string;
+    originalName: string;
+    uploadedAt: string;
+  }>;
+  // Legacy fields for backward compatibility
+  shortDescription?: string;
+  supplier?: string;
+  sellerInfo?: {
+    businessName?: string;
+    location?: string;
+    isVerified?: boolean;
+  };
   comparePrice?: number;
   cost?: number;
-  sku: string;
+  sku?: string;
   barcode?: string;
-  quantity: number;
-  lowStockThreshold: number;
-  weight?: number;
-  weightUnit: string;
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-  dimensionUnit: string;
-  status: string;
-  isVisible: boolean;
-  isFeatured: boolean;
-  isDigital: boolean;
-  trackQuantity: boolean;
-  allowBackorder: boolean;
-  taxable: boolean;
-  taxRate: number;
-  images: Array<{
-    url: string;
-    alt?: string;
-    isPrimary: boolean;
-    order: number;
-  }>;
-  specifications: Array<{
+  quantity?: number;
+  frozenStock?: number;
+  lowStockThreshold?: number;
+  weightUnit?: string;
+  dimensionUnit?: string;
+  status?: string;
+  isVisible?: boolean;
+  isFeatured?: boolean;
+  isDigital?: boolean;
+  trackQuantity?: boolean;
+  allowBackorder?: boolean;
+  taxable?: boolean;
+  taxRate?: number;
+  specifications?: Array<{
     name: string;
     value: string;
     unit?: string;
   }>;
-  seo: {
+  seo?: {
     metaTitle?: string;
     metaDescription?: string;
     keywords?: string[];
@@ -86,7 +125,7 @@ interface Seller {
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product?: Product | null;
+  product?: any; // Use any to avoid type conflicts between different Product interfaces
   onSaved: () => void;
 }
 
@@ -103,23 +142,41 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [formData, setFormData] = useState<Partial<Product>>({
     name: "",
     description: "",
+    // ProductService fields
+    title: "",
+    productHeading: "",
+    productDescription: "",
+    // Legacy fields
     shortDescription: "",
     category: "",
     subCategory: "",
-    seller: "",
+    seller: undefined,
     supplier: "",
+    sellerInfo: {
+      businessName: "",
+      location: "",
+      isVerified: false
+    },
     tags: [],
     basePrice: 0,
+    currency: "USD",
     comparePrice: 0,
     cost: 0,
     sku: "",
     barcode: "",
     quantity: 0,
+    frozenStock: 0,
     lowStockThreshold: 10,
+    quantityPerOrder: "1",
+    daysToCompleteOrder: "1-3",
+    stockType: "instock",
     weight: 0,
     weightUnit: "kg",
     dimensions: { length: 0, width: 0, height: 0 },
     dimensionUnit: "cm",
+    makeModel: "",
+    materialType: "",
+    unitsAvailable: "",
     status: "draft",
     isVisible: true,
     isFeatured: false,
@@ -129,17 +186,28 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     taxable: true,
     taxRate: 0,
     images: [],
+    videos: [],
     specifications: [],
     seo: {
       metaTitle: "",
       metaDescription: "",
       keywords: [],
       canonicalUrl: ""
-    }
+    },
+    restrictedBuyerAccess: "",
+    productWarranty: "",
+    certificationType: "",
+    defenseCertification: "",
+    registrationNumber: "",
+    certificationDocs: []
   });
 
   const [newSpecification, setNewSpecification] = useState({ name: "", value: "", unit: "" });
   const [newImage, setNewImage] = useState({ url: "", alt: "", isPrimary: false });
+  const [newVideo, setNewVideo] = useState({ url: "", title: "", description: "" });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const normalizeProduct = (p: any): Partial<Product> => {
     const safeVal = <T,>(val: T | undefined, fallback: T) => (val === undefined || val === null ? fallback : val);
@@ -271,7 +339,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       shortDescription: "",
       category: "",
       subCategory: "",
-      seller: "",
+      seller: undefined,
       supplier: "",
       tags: [],
       basePrice: 0,
@@ -362,11 +430,133 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const setPrimaryImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images?.map((img, i) => ({
-        ...img,
-        isPrimary: i === index
-      }))
+      images: prev.images?.map((img, i) => {
+        if (typeof img === 'string') {
+          return {
+            url: img,
+            alt: '',
+            isPrimary: i === index,
+            order: i
+          };
+        } else {
+          return {
+            ...img,
+            isPrimary: i === index
+          };
+        }
+      })
     }));
+  };
+
+  const addVideo = () => {
+    if (newVideo.url) {
+      const videoData = {
+        ...newVideo
+      };
+      setFormData(prev => ({
+        ...prev,
+        videos: [...(prev.videos || []), videoData]
+      }));
+      setNewVideo({ url: "", title: "", description: "" });
+    }
+  };
+
+  const removeVideo = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      videos: prev.videos?.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    setUploadProgress(0);
+
+    try {
+      const fileArray = Array.from(files);
+      const results = await uploadService.uploadProductFiles(
+        fileArray,
+        'image',
+        formData._id,
+        {
+          onProgress: (progress) => {
+            setUploadProgress(progress.percentage);
+          },
+          onError: (error) => {
+            console.error('Upload error:', error);
+            alert(`Upload failed: ${error}`);
+          }
+        }
+      );
+
+      // Add uploaded images to form data
+      const newImages = results.map(result => ({
+        url: result.url!,
+        alt: result.originalName || '',
+        isPrimary: false,
+        order: (formData.images?.length || 0) + results.indexOf(result)
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...newImages]
+      }));
+
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload images');
+    } finally {
+      setUploadingImages(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingVideos(true);
+    setUploadProgress(0);
+
+    try {
+      const fileArray = Array.from(files);
+      const results = await uploadService.uploadProductFiles(
+        fileArray,
+        'video',
+        formData._id,
+        {
+          onProgress: (progress) => {
+            setUploadProgress(progress.percentage);
+          },
+          onError: (error) => {
+            console.error('Upload error:', error);
+            alert(`Upload failed: ${error}`);
+          }
+        }
+      );
+
+      // Add uploaded videos to form data
+      const newVideos = results.map(result => ({
+        url: result.url!,
+        title: result.originalName || '',
+        description: ''
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        videos: [...(prev.videos || []), ...newVideos]
+      }));
+
+    } catch (error) {
+      console.error('Video upload error:', error);
+      alert('Failed to upload videos');
+    } finally {
+      setUploadingVideos(false);
+      setUploadProgress(0);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -531,7 +721,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Label htmlFor="category">Category *</Label>
                 <select
                   id="category"
-                  value={formData.category || ""}
+                  value={String(formData.category || "")}
                   onChange={(e) => {
                     handleInputChange("category", e.target.value);
                     handleInputChange("subCategory", "");
@@ -551,7 +741,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Label htmlFor="subCategory">Sub Category</Label>
                 <select
                   id="subCategory"
-                  value={formData.subCategory || ""}
+                  value={String(formData.subCategory || "")}
                   onChange={(e) => handleInputChange("subCategory", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={!formData.category}
@@ -570,7 +760,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Label htmlFor="seller">Seller *</Label>
                 <select
                   id="seller"
-                  value={formData.seller || ""}
+                  value={String(formData.seller || "")}
                   onChange={(e) => handleInputChange("seller", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
@@ -601,28 +791,54 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
               <div className="md:col-span-2">
                 <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {(tags || []).map(tag => (
-                    <label key={tag._id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={formData.tags?.includes(tag._id) || false}
-                        onChange={(checked) => {
-                          const currentTags = formData.tags || [];
-                          if (checked) {
-                            handleInputChange("tags", [...currentTags, tag._id]);
-                          } else {
-                            handleInputChange("tags", currentTags.filter(t => t !== tag._id));
-                          }
-                        }}
-                      />
-                      <span
-                        className="px-2 py-1 rounded text-sm"
-                        style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                      >
-                        {tag.name}
-                      </span>
-                    </label>
-                  ))}
+                <div className="mt-2">
+                  {loading ? (
+                    <div className="text-sm text-gray-500">Loading tags...</div>
+                  ) : tags.length === 0 ? (
+                    <div className="text-sm text-gray-500">No tags available</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map(tag => {
+                        const isSelected = (formData.tags as string[])?.includes(tag._id) || false;
+                        return (
+                          <label 
+                            key={tag._id} 
+                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                              isSelected 
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                            }`}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={(checked) => {
+                                const currentTags = formData.tags || [];
+                                if (checked) {
+                                  handleInputChange("tags", [...currentTags, tag._id]);
+                                } else {
+                                  handleInputChange("tags", currentTags.filter(t => t !== tag._id));
+                                }
+                              }}
+                            />
+                            <span
+                              className="px-2 py-1 rounded text-sm font-medium"
+                              style={{ 
+                                backgroundColor: isSelected ? tag.color : tag.color + '20', 
+                                color: isSelected ? 'white' : tag.color 
+                              }}
+                            >
+                              {tag.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {formData.tags && formData.tags.length > 0 && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Selected: {formData.tags.length} tag(s)
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -643,6 +859,22 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   onChange={(e) => handleInputChange("basePrice", parseFloat(e.target.value))}
                   required
                 />
+              </div>
+              <div>
+                <Label htmlFor="currency">Currency</Label>
+                <select
+                  id="currency"
+                  value={formData.currency || "USD"}
+                  onChange={(e) => handleInputChange("currency", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="INR">INR</option>
+                  <option value="CAD">CAD</option>
+                  <option value="AUD">AUD</option>
+                </select>
               </div>
               <div>
                 <Label htmlFor="comparePrice">Compare Price</Label>
@@ -693,6 +925,53 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   value={formData.lowStockThreshold || 10}
                   onChange={(e) => handleInputChange("lowStockThreshold", parseInt(e.target.value))}
                 />
+              </div>
+              <div>
+                <Label htmlFor="frozenStock">Frozen Stock</Label>
+                <Input
+                  id="frozenStock"
+                  type="number"
+                  min="0"
+                  value={formData.frozenStock || 0}
+                  onChange={(e) => handleInputChange("frozenStock", parseInt(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="quantityPerOrder">Quantity Per Order</Label>
+                <Input
+                  id="quantityPerOrder"
+                  type="number"
+                  min="1"
+                  value={formData.quantityPerOrder || 1}
+                  onChange={(e) => handleInputChange("quantityPerOrder", parseInt(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="daysToCompleteOrder">Days to Complete Order</Label>
+                <select
+                  id="daysToCompleteOrder"
+                  value={formData.daysToCompleteOrder || "1-3"}
+                  onChange={(e) => handleInputChange("daysToCompleteOrder", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="1-3">1-3 days</option>
+                  <option value="4-7">4-7 days</option>
+                  <option value="8-14">8-14 days</option>
+                  <option value="15-30">15-30 days</option>
+                  <option value="30+">30+ days</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="stockType">Stock Type</Label>
+                <select
+                  id="stockType"
+                  value={formData.stockType || "instock"}
+                  onChange={(e) => handleInputChange("stockType", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="instock">In Stock</option>
+                  <option value="byorder">By Order</option>
+                </select>
               </div>
               <div>
                 <Label htmlFor="barcode">Barcode</Label>
@@ -760,6 +1039,37 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Images</h3>
             <div className="space-y-4">
+              {/* File Upload Section */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  id="image-upload"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <UploadIcon className="h-8 w-8 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {uploadingImages ? `Uploading... ${uploadProgress}%` : 'Click to upload images'}
+                  </span>
+                  <span className="text-xs text-gray-500">JPG, PNG, GIF, WebP (max 10MB each)</span>
+                </label>
+                {uploadingImages && (
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual URL Input */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
                   type="text"
@@ -784,8 +1094,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   {(formData.images || []).map((image, index) => (
                     <div key={index} className="relative border rounded-lg p-2">
                       <img
-                        src={image.url}
-                        alt={image.alt || ""}
+                        src={typeof image === 'string' ? image : image.url || ''}
+                        alt={typeof image === 'string' ? '' : image.alt || ""}
                         className="w-full h-24 object-cover rounded"
                       />
                       <div className="absolute top-2 right-2 flex gap-1">
@@ -793,12 +1103,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           type="button"
                           onClick={() => setPrimaryImage(index)}
                           className={`p-1 rounded text-xs ${
-                            image.isPrimary
+                            (typeof image === 'object' && image.isPrimary)
                               ? "bg-blue-500 text-white"
                               : "bg-gray-200 text-gray-600 hover:bg-gray-300"
                           }`}
                         >
-                          {image.isPrimary ? "Primary" : "Set Primary"}
+                          {(typeof image === 'object' && image.isPrimary) ? "Primary" : "Set Primary"}
                         </button>
                         <button
                           type="button"
@@ -808,6 +1118,94 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           <TrashIcon className="h-3 w-3" />
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Videos */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Videos</h3>
+            <div className="space-y-4">
+              {/* File Upload Section */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  id="video-upload"
+                  multiple
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="video-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <UploadIcon className="h-8 w-8 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {uploadingVideos ? `Uploading... ${uploadProgress}%` : 'Click to upload videos'}
+                  </span>
+                  <span className="text-xs text-gray-500">MP4, AVI, MOV, WebM (max 100MB each)</span>
+                </label>
+                {uploadingVideos && (
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual URL Input */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  type="text"
+                  placeholder="Video URL"
+                  value={newVideo.url}
+                  onChange={(e) => setNewVideo(prev => ({ ...prev, url: e.target.value }))}
+                />
+                <Input
+                  type="text"
+                  placeholder="Video title"
+                  value={newVideo.title}
+                  onChange={(e) => setNewVideo(prev => ({ ...prev, title: e.target.value }))}
+                />
+                <Button type="button" onClick={addVideo} className="flex items-center gap-2">
+                  <PlusIcon />
+                  Add Video
+                </Button>
+              </div>
+              
+              {formData.videos && formData.videos.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(formData.videos || []).map((video, index) => (
+                    <div key={index} className="relative border rounded-lg p-2">
+                      <div className="aspect-video bg-gray-100 rounded mb-2">
+                        <video
+                          src={typeof video === 'string' ? video : video.url || ''}
+                          controls
+                          className="w-full h-full object-cover rounded"
+                          preload="metadata"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium">{typeof video === 'string' ? `Video ${index + 1}` : video.title || `Video ${index + 1}`}</p>
+                        {typeof video === 'object' && video.description && (
+                          <p className="text-gray-600 text-xs">{video.description}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(index)}
+                        className="absolute top-2 right-2 p-1 rounded bg-red-500 text-white text-xs hover:bg-red-600"
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -864,6 +1262,128 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* ProductService Fields */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Product Service Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="title">Product Title</Label>
+                <Input
+                  id="title"
+                  type="text"
+                  value={formData.title || ""}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  placeholder="Product title for display"
+                />
+              </div>
+              <div>
+                <Label htmlFor="productHeading">Product Heading</Label>
+                <Input
+                  id="productHeading"
+                  type="text"
+                  value={formData.productHeading || ""}
+                  onChange={(e) => handleInputChange("productHeading", e.target.value)}
+                  placeholder="Main product heading"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="productDescription">Product Description</Label>
+                <textarea
+                  id="productDescription"
+                  value={formData.productDescription || ""}
+                  onChange={(e) => handleInputChange("productDescription", e.target.value)}
+                  placeholder="Detailed product description"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="unitsAvailable">Units Available</Label>
+                <Input
+                  id="unitsAvailable"
+                  type="text"
+                  value={formData.unitsAvailable || ""}
+                  onChange={(e) => handleInputChange("unitsAvailable", e.target.value)}
+                  placeholder="e.g., 100 units"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Product Information */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="makeModel">Make & Model</Label>
+                <Input
+                  id="makeModel"
+                  type="text"
+                  value={formData.makeModel || ""}
+                  onChange={(e) => handleInputChange("makeModel", e.target.value)}
+                  placeholder="e.g., Apple iPhone 15"
+                />
+              </div>
+              <div>
+                <Label htmlFor="materialType">Material Type</Label>
+                <Input
+                  id="materialType"
+                  type="text"
+                  value={formData.materialType || ""}
+                  onChange={(e) => handleInputChange("materialType", e.target.value)}
+                  placeholder="e.g., Steel, Aluminum, Plastic"
+                />
+              </div>
+              <div>
+                <Label htmlFor="restrictedBuyerAccess">Restricted Buyer Access</Label>
+                <Input
+                  id="restrictedBuyerAccess"
+                  type="text"
+                  value={formData.restrictedBuyerAccess || ""}
+                  onChange={(e) => handleInputChange("restrictedBuyerAccess", e.target.value)}
+                  placeholder="e.g., Government only, Military only"
+                />
+              </div>
+              <div>
+                <Label htmlFor="productWarranty">Product Warranty</Label>
+                <Input
+                  id="productWarranty"
+                  type="text"
+                  value={formData.productWarranty || ""}
+                  onChange={(e) => handleInputChange("productWarranty", e.target.value)}
+                  placeholder="e.g., 1 year manufacturer warranty"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Defense Certification */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Defense Certification</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="certificationType">Certification Type</Label>
+                <Input
+                  id="certificationType"
+                  type="text"
+                  value={formData.certificationType || ""}
+                  onChange={(e) => handleInputChange("certificationType", e.target.value)}
+                  placeholder="e.g., ITAR, FIPS, Common Criteria"
+                />
+              </div>
+              <div>
+                <Label htmlFor="registrationNumber">Registration Number</Label>
+                <Input
+                  id="registrationNumber"
+                  type="text"
+                  value={formData.registrationNumber || ""}
+                  onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
+                  placeholder="Certification registration number"
+                />
+              </div>
             </div>
           </div>
 

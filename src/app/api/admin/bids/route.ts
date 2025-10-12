@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/utils/adminAccess";
 import { connectToDatabase as connectDB } from "@/lib/db";
-const Bid = require("@/models/bidModel");
-import User from "@/models/userModel";
-import Category from "@/models/categoryModel";
 
 // Ensure models are registered
 const ensureModelsRegistered = () => {
-  // These imports will register the models with Mongoose
-  User;
-  Category;
-  Bid;
+  require("@/models/userModel");
+  require("@/models/categoryModel");
+  require("@/models/bidModel");
 };
 
 // GET /api/admin/bids - Get all bids with pagination and filters
@@ -29,6 +25,11 @@ export async function GET(request: NextRequest) {
     }
 
     await connectDB();
+
+    // Import models - using dynamic imports for ES modules
+    const Bid = (await import("@/models/bidModel")).default;
+    const User = (await import("@/models/userModel")).default;
+    const Category = (await import("@/models/categoryModel")).default;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -121,6 +122,11 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+
+    // Import models - using dynamic imports for ES modules
+    const Bid = (await import("@/models/bidModel")).default;
+    const User = (await import("@/models/userModel")).default;
+    const Category = (await import("@/models/categoryModel")).default;
 
     const body = await request.json();
     const {

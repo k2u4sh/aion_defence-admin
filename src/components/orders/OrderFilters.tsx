@@ -67,25 +67,25 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({ filters, onFiltersCh
 
   return (
     <div className="bg-white rounded-lg shadow dark:bg-gray-800">
-      <div className="px-4 py-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+      <div className="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-medium leading-6 text-gray-900 dark:text-white">
             Filter Orders
           </h3>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            className="text-xs sm:text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
           >
             {isExpanded ? "Hide Filters" : "Show Filters"}
           </button>
         </div>
 
         {isExpanded && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {/* Search and Basic Filters */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                   Search
                 </label>
                 <InputField

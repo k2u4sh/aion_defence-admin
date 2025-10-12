@@ -3,72 +3,104 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronLeftIcon, EditIcon, TrashIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, UserIcon, DollarIcon, PackageIcon, StarIcon, TagIcon, BoxIcon } from "@/icons";
+import { ChevronLeftIcon, EditIcon, TrashIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, UserIcon, DollarIcon, PackageIcon, StarIcon, TagIcon, BoxIcon, EyeIcon } from "@/icons";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
+import ProductFormModal from "@/components/products/ProductFormModal";
 import { useModal } from "@/hooks/useModal";
+import { getImageUrl, handleImageError } from "@/utils/imageUtils";
 
 interface Product {
   _id: string;
+  slug?: string;
   name: string;
-  slug: string;
   description: string;
-  shortDescription: string;
-  sku: string;
-  barcode?: string;
-  status: 'draft' | 'active' | 'inactive' | 'archived';
+  category: string | { _id: string; name: string };
+  subCategory?: string | { _id: string; name: string };
+  currency: string;
   basePrice: number;
+  images?: Array<string | { url?: string; alt?: string; isPrimary?: boolean; order?: number }>;
+  videos?: Array<string | { url?: string; title?: string; description?: string }>;
+  seller?: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+  };
+  tags?: string[] | Array<{ _id: string; name: string; color: string }>;
+  weight?: number;
+  pricing?: {
+    basePrice: number;
+    currency: string;
+  };
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+  stockType?: string;
+  reviews?: Array<{
+    rating: number;
+    comment: string;
+    user: string;
+  }>;
+  // Additional fields from ProductService
+  title?: string;
+  productHeading?: string;
+  productDescription?: string;
+  shortDescription?: string;
+  makeModel?: string;
+  materialType?: string;
+  unitsAvailable?: string;
+  daysToCompleteOrder?: string;
+  quantityPerOrder?: string;
+  certificationType?: string;
+  defenseCertification?: string;
+  registrationNumber?: string;
+  restrictedBuyerAccess?: string;
+  productWarranty?: string;
+  certificationDocs?: Array<{
+    url: string;
+    originalName: string;
+    uploadedAt: string;
+  }>;
+  // Legacy fields for backward compatibility
+  sku?: string;
+  barcode?: string;
+  status?: 'draft' | 'active' | 'inactive' | 'archived';
   comparePrice?: number;
   cost?: number;
-  quantity: number;
-  quantityPerOrder: number;
-  lowStockThreshold: number;
-  trackQuantity: boolean;
-  allowBackorder: boolean;
-  taxable: boolean;
-  taxRate: number;
-  category: { _id: string; name: string };
-  subCategory?: { _id: string; name: string };
-  tags: Array<{ _id: string; name: string; color: string }>;
-  seller: { _id: string; firstName: string; lastName: string; companyName?: string };
-  images: Array<{ url: string; alt: string; isPrimary: boolean; order: number }>;
-  specifications: Array<{ name: string; value: string; unit?: string }>;
-  makeModel?: string;
-  weight?: number;
-  weightUnit: 'kg' | 'g';
-  dimensions: { length: number; width: number; height: number };
-  dimensionUnit: 'cm' | 'mm' | 'm' | 'in' | 'ft';
-  isVisible: boolean;
-  isFeatured: boolean;
-  isDigital: boolean;
-  hasVariants: boolean;
-  variants: Array<any>;
-  averageRating: number;
-  totalReviews: number;
+  quantity?: number;
+  frozenStock?: number;
+  lowStockThreshold?: number;
+  trackQuantity?: boolean;
+  allowBackorder?: boolean;
+  taxable?: boolean;
+  taxRate?: number;
+  weightUnit?: 'kg' | 'g';
+  dimensionUnit?: 'cm' | 'mm' | 'm' | 'in' | 'ft';
+  isVisible?: boolean;
+  isFeatured?: boolean;
+  isDigital?: boolean;
+  hasVariants?: boolean;
+  variants?: Array<any>;
+  averageRating?: number;
+  totalReviews?: number;
   vendor?: string;
   supplier?: string;
   supplierSku?: string;
-  warranty?: string;
-  warrantyPeriod?: number;
-  warrantyUnit?: 'days' | 'months' | 'years';
-  returnPolicy?: string;
-  shippingClass?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  seoKeywords?: string[];
-  metaTags?: Array<{ name: string; content: string }>;
-  customFields?: Array<{ name: string; value: string; type: string }>;
-  relatedProducts?: string[];
-  crossSellProducts?: string[];
-  upSellProducts?: string[];
-  bundleProducts?: string[];
-  defenseCertification?: {
-    certified: boolean;
-    certificationNumber?: string;
-    certificationBody?: string;
-    validUntil?: string;
-    documents?: Array<{ name: string; url: string; type: string }>;
+  specifications?: Array<{ name: string; value: string; unit?: string }>;
+  sellerInfo?: {
+    businessName?: string;
+    location?: string;
+    isVerified?: boolean;
+  };
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    keywords?: string[];
+    canonicalUrl?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -82,7 +114,9 @@ const ProductDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
+  const { isOpen: isProductModalOpen, openModal: openProductModal, closeModal: closeProductModal } = useModal();
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (productId) {
@@ -134,6 +168,18 @@ const ProductDetailPage = () => {
     openDeleteModal();
   };
 
+  const openEditModal = () => {
+    if (product) {
+      setSelectedProduct(product);
+      openProductModal();
+    }
+  };
+
+  const handleProductSaved = () => {
+    // Refresh the product data after editing
+    fetchProduct();
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { color: "warning" as const, label: "Draft" },
@@ -151,10 +197,10 @@ const ProductDetailPage = () => {
     return new Date(dateString).toISOString();
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: currency
     }).format(amount);
   };
 
@@ -204,12 +250,14 @@ const ProductDetailPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/admin-management/products/${productId}/edit`}>
-            <Button variant="outline" className="flex items-center gap-2">
-              <EditIcon className="h-4 w-4" />
-              Edit Product
-            </Button>
-          </Link>
+          <Button 
+            onClick={openEditModal}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <EditIcon className="h-4 w-4" />
+            Edit Product
+          </Button>
           <Button 
             onClick={handleOpenDeleteModal}
             variant="outline" 
@@ -224,40 +272,118 @@ const ProductDetailPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Product Images */}
-          {product.images && product.images.length > 0 && (
+          {/* Product Media Gallery */}
+          {((product.images && product.images.length > 0) || (product.videos && product.videos.length > 0)) && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Images</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {product.images.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={image.url}
-                      alt={image.alt || product.name}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    {image.isPrimary && (
-                      <div className="absolute top-2 right-2">
-                        <Badge color="success">Primary</Badge>
-                      </div>
-                    )}
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Media</h2>
+              
+              {/* Images Section */}
+              {product.images && product.images.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">Images ({product.images.length})</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {product.images.map((image, index) => {
+                      const imageUrl = typeof image === 'string' ? image : image.url;
+                      const imageAlt = typeof image === 'string' ? product.name : (image.alt || product.name);
+                      const isPrimary = typeof image === 'object' ? image.isPrimary : false;
+                      
+                      if (!imageUrl) return null;
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={getImageUrl(imageUrl)}
+                            alt={imageAlt}
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => window.open(getImageUrl(imageUrl), '_blank')}
+                            onError={handleImageError}
+                          />
+                          {isPrimary && (
+                            <div className="absolute top-2 right-2">
+                              <Badge color="success">Primary</Badge>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <EyeIcon className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Videos Section */}
+              {product.videos && product.videos.length > 0 && (
+                <div>
+                  <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">Videos ({product.videos.length})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {product.videos.map((video, index) => {
+                      const videoUrl = typeof video === 'string' ? video : video.url;
+                      const videoTitle = typeof video === 'object' ? video.title : `Video ${index + 1}`;
+                      const videoDescription = typeof video === 'object' ? video.description : '';
+                      
+                      return (
+                        <div key={index} className="relative">
+                          <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+                            <video
+                              src={videoUrl}
+                              controls
+                              className="w-full h-full object-cover"
+                              preload="metadata"
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          </div>
+                          <div className="mt-2">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-white">{videoTitle}</h4>
+                            {videoDescription && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{videoDescription}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Product Information */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Information</h2>
-            <div className="space-y-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
                 <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap">{product.description}</p>
               </div>
               
-              {product.shortDescription && (
+              {product.title && (
                 <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.title}</p>
+                </div>
+              )}
+
+              {product.productHeading && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Heading</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.productHeading}</p>
+                </div>
+              )}
+
+              {product.productDescription && (
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Description</label>
+                  <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap">{product.productDescription}</p>
+                </div>
+              )}
+
+              {product.shortDescription && (
+                <div className="md:col-span-2">
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Short Description</label>
                   <p className="mt-1 text-gray-900 dark:text-white">{product.shortDescription}</p>
                 </div>
@@ -267,6 +393,48 @@ const ProductDetailPage = () => {
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Make & Model</label>
                   <p className="mt-1 text-gray-900 dark:text-white">{product.makeModel}</p>
+                </div>
+              )}
+
+              {product.materialType && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Material Type</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.materialType}</p>
+                </div>
+              )}
+
+              {product.unitsAvailable && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Units Available</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.unitsAvailable}</p>
+                </div>
+              )}
+
+              {product.daysToCompleteOrder && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Days to Complete Order</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.daysToCompleteOrder}</p>
+                </div>
+              )}
+
+              {product.quantityPerOrder && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Quantity Per Order</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.quantityPerOrder}</p>
+                </div>
+              )}
+
+              {product.restrictedBuyerAccess && (
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Restricted Buyer Access</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.restrictedBuyerAccess}</p>
+                </div>
+              )}
+
+              {product.productWarranty && (
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Warranty</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.productWarranty}</p>
                 </div>
               )}
             </div>
@@ -289,6 +457,38 @@ const ProductDetailPage = () => {
             </div>
           )}
 
+          {/* Product Reviews */}
+          {product.reviews && product.reviews.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Product Reviews ({product.reviews.length})</h2>
+              <div className="space-y-4">
+                {product.reviews.map((review, index) => (
+                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <StarIcon
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < review.rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300 dark:text-gray-600'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Rating: {review.rating}/5
+                      </span>
+                    </div>
+                    <p className="text-gray-900 dark:text-white mb-2">{review.comment}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">User: {review.user}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Defense Certification */}
           {product.defenseCertification && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
@@ -297,28 +497,31 @@ const ProductDetailPage = () => {
                 <div className="flex items-center gap-2">
                   <CheckCircleIcon className="h-5 w-5 text-green-500" />
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {product.defenseCertification.certified ? 'Certified' : 'Not Certified'}
+                    {typeof product.defenseCertification === 'string' 
+                      ? product.defenseCertification 
+                      : (product.defenseCertification as any).certified ? 'Certified' : 'Not Certified'
+                    }
                   </span>
                 </div>
                 
-                {product.defenseCertification.certificationNumber && (
+                {typeof product.defenseCertification === 'object' && (product.defenseCertification as any).certificationNumber && (
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Certification Number</label>
-                    <p className="mt-1 text-gray-900 dark:text-white">{product.defenseCertification.certificationNumber}</p>
+                    <p className="mt-1 text-gray-900 dark:text-white">{(product.defenseCertification as any).certificationNumber}</p>
                   </div>
                 )}
                 
-                {product.defenseCertification.certificationBody && (
+                {typeof product.defenseCertification === 'object' && (product.defenseCertification as any).certificationBody && (
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Certification Body</label>
-                    <p className="mt-1 text-gray-900 dark:text-white">{product.defenseCertification.certificationBody}</p>
+                    <p className="mt-1 text-gray-900 dark:text-white">{(product.defenseCertification as any).certificationBody}</p>
                   </div>
                 )}
                 
-                {product.defenseCertification.validUntil && (
+                {typeof product.defenseCertification === 'object' && (product.defenseCertification as any).validUntil && (
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Valid Until</label>
-                    <p className="mt-1 text-gray-900 dark:text-white">{formatDate(product.defenseCertification.validUntil)}</p>
+                    <p className="mt-1 text-gray-900 dark:text-white">{formatDate((product.defenseCertification as any).validUntil)}</p>
                   </div>
                 )}
               </div>
@@ -335,7 +538,7 @@ const ProductDetailPage = () => {
               <div>
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
                 <div className="mt-1">
-                  {getStatusBadge(product.status)}
+                  {getStatusBadge(product.status || 'draft')}
                 </div>
               </div>
               
@@ -368,20 +571,29 @@ const ProductDetailPage = () => {
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Base Price</label>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(product.basePrice)}</p>
+                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(product.basePrice, product.currency)}
+                </p>
               </div>
+              
+              {product.currency && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Currency</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.currency}</p>
+                </div>
+              )}
               
               {product.comparePrice && (
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Compare Price</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{formatCurrency(product.comparePrice)}</p>
+                  <p className="mt-1 text-gray-900 dark:text-white">{formatCurrency(product.comparePrice, product.currency)}</p>
                 </div>
               )}
               
               {product.cost && (
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cost</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{formatCurrency(product.cost)}</p>
+                  <p className="mt-1 text-gray-900 dark:text-white">{formatCurrency(product.cost, product.currency)}</p>
                 </div>
               )}
               
@@ -417,6 +629,38 @@ const ProductDetailPage = () => {
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Allow Backorder</label>
                 <p className="mt-1 text-gray-900 dark:text-white">{product.allowBackorder ? 'Yes' : 'No'}</p>
               </div>
+              
+              {product.frozenStock !== undefined && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Frozen Stock</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.frozenStock}</p>
+                </div>
+              )}
+              
+              {product.quantityPerOrder && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Quantity Per Order</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.quantityPerOrder}</p>
+                </div>
+              )}
+              
+              {product.daysToCompleteOrder && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Days to Complete Order</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">{product.daysToCompleteOrder}</p>
+                </div>
+              )}
+              
+              {product.stockType && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Stock Type</label>
+                  <div className="mt-1">
+                    <Badge color={product.stockType === 'instock' ? 'success' : 'warning'}>
+                      {product.stockType === 'instock' ? 'In Stock' : 'By Order'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -426,13 +670,17 @@ const ProductDetailPage = () => {
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Category</label>
-                <p className="mt-1 text-gray-900 dark:text-white">{product.category.name}</p>
+                <p className="mt-1 text-gray-900 dark:text-white">
+                  {typeof product.category === 'string' ? product.category : product.category?.name || 'N/A'}
+                </p>
               </div>
               
               {product.subCategory && (
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Sub Category</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.subCategory.name}</p>
+                  <p className="mt-1 text-gray-900 dark:text-white">
+                    {typeof product.subCategory === 'string' ? product.subCategory : product.subCategory?.name || 'N/A'}
+                  </p>
                 </div>
               )}
               
@@ -440,9 +688,19 @@ const ProductDetailPage = () => {
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Tags</label>
                   <div className="mt-1 flex flex-wrap gap-2">
-                    {product.tags.map((tag) => (
-                      <Badge key={tag._id} color="info">{tag.name}</Badge>
-                    ))}
+                    {product.tags.map((tag, index) => {
+                      const tagId = typeof tag === 'string' ? tag : tag._id;
+                      const tagName = typeof tag === 'string' ? tag : tag.name;
+                      return (
+                        <Badge 
+                          key={tagId || index} 
+                          color="info"
+                        >
+                          <TagIcon className="h-3 w-3" />
+                          {tagName}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -450,24 +708,130 @@ const ProductDetailPage = () => {
           </div>
 
           {/* Seller Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Seller</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
-                <p className="mt-1 text-gray-900 dark:text-white">
-                  {product.seller.firstName} {product.seller.lastName}
-                </p>
-              </div>
-              
-              {product.seller.companyName && (
+          {product.seller && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Seller</h2>
+              <div className="space-y-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.seller.companyName}</p>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                  <p className="mt-1 text-gray-900 dark:text-white">
+                    {product.seller.firstName} {product.seller.lastName}
+                  </p>
+                </div>
+                
+                {product.seller.companyName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.seller.companyName}</p>
+                  </div>
+                )}
+
+              {product.sellerInfo && (
+                <>
+                  {product.sellerInfo.businessName && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Business Name</label>
+                      <p className="mt-1 text-gray-900 dark:text-white">{product.sellerInfo.businessName}</p>
+                    </div>
+                  )}
+                  {product.sellerInfo.location && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</label>
+                      <p className="mt-1 text-gray-900 dark:text-white">{product.sellerInfo.location}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Verification Status</label>
+                    <div className="mt-1">
+                      <Badge color={product.sellerInfo.isVerified ? 'success' : 'warning'}>
+                        {product.sellerInfo.isVerified ? 'Verified' : 'Unverified'}
+                      </Badge>
+                    </div>
+                  </div>
+                </>
+              )}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Product Information */}
+          {(product.makeModel || product.materialType || product.restrictedBuyerAccess || product.productWarranty) && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {product.makeModel && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Make & Model</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.makeModel}</p>
+                  </div>
+                )}
+                {product.materialType && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Material Type</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.materialType}</p>
+                  </div>
+                )}
+                {product.restrictedBuyerAccess && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Restricted Buyer Access</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.restrictedBuyerAccess}</p>
+                  </div>
+                )}
+                {product.productWarranty && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Warranty</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.productWarranty}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Defense Certification */}
+          {(product.certificationType || product.registrationNumber || product.certificationDocs) && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Defense Certification</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {product.certificationType && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Certification Type</label>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.certificationType}</p>
+                  </div>
+                )}
+                {product.registrationNumber && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Registration Number</label>
+                    <p className="mt-1 text-gray-900 dark:text-white font-mono">{product.registrationNumber}</p>
+                  </div>
+                )}
+              </div>
+              {product.certificationDocs && product.certificationDocs.length > 0 && (
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Certification Documents</label>
+                  <div className="mt-2 space-y-2">
+                    {product.certificationDocs.map((doc, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{doc.originalName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          View Document
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Physical Properties */}
           {(product.weight || product.dimensions) && (
@@ -494,21 +858,21 @@ const ProductDetailPage = () => {
           )}
 
           {/* SEO Information */}
-          {(product.seoTitle || product.seoDescription) && (
+          {(product.seo?.metaTitle || product.seo?.metaDescription) && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">SEO Information</h2>
               <div className="space-y-3">
-                {product.seoTitle && (
+                {product.seo?.metaTitle && (
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">SEO Title</label>
-                    <p className="mt-1 text-gray-900 dark:text-white">{product.seoTitle}</p>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.seo.metaTitle}</p>
                   </div>
                 )}
                 
-                {product.seoDescription && (
+                {product.seo?.metaDescription && (
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">SEO Description</label>
-                    <p className="mt-1 text-gray-900 dark:text-white">{product.seoDescription}</p>
+                    <p className="mt-1 text-gray-900 dark:text-white">{product.seo.metaDescription}</p>
                   </div>
                 )}
               </div>
@@ -540,6 +904,14 @@ const ProductDetailPage = () => {
         onConfirm={handleDeleteProduct}
         title="Delete Product"
         message="Are you sure you want to delete this product? This action cannot be undone."
+      />
+
+      {/* Product Form Modal */}
+      <ProductFormModal
+        isOpen={isProductModalOpen}
+        onClose={closeProductModal}
+        product={selectedProduct}
+        onSaved={handleProductSaved}
       />
     </div>
   );

@@ -53,6 +53,11 @@ const variantSchema = new mongoose.Schema({
     min: 0,
     default: 0
   },
+  frozenStock: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   weight: {
     type: Number,
     min: 0
@@ -156,8 +161,9 @@ const productSchema = new mongoose.Schema({
     index: true
   },
   tags: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tag',
+    type: String,
+    trim: true,
+    lowercase: true,
     index: true
   }],
 
@@ -182,6 +188,14 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Base price is required'],
     min: [0, 'Price cannot be negative']
+  },
+  currency: {
+    type: String,
+    required: [true, 'Currency is required'],
+    trim: true,
+    uppercase: true,
+    enum: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'SGD', 'HKD', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK', 'HUF', 'RUB', 'ZAR', 'KRW', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'TRY', 'ILS', 'AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'JOD', 'LBP', 'EGP', 'MAD', 'TND', 'DZD', 'LYD', 'SDG', 'ETB', 'KES', 'UGX', 'TZS', 'ZMW', 'BWP', 'SZL', 'LSL', 'MZN', 'AOA', 'NGN', 'GHS', 'XOF', 'XAF', 'CDF', 'RWF', 'BIF', 'KMF', 'DJF', 'SOS', 'ERN', 'ETB', 'MAD', 'TND', 'DZD', 'LYD', 'SDG', 'ETB', 'KES', 'UGX', 'TZS', 'ZMW', 'BWP', 'SZL', 'LSL', 'MZN', 'AOA', 'NGN', 'GHS', 'XOF', 'XAF', 'CDF', 'RWF', 'BIF', 'KMF', 'DJF', 'SOS', 'ERN'],
+    default: 'USD'
   },
   comparePrice: {
     type: Number,
@@ -223,11 +237,21 @@ const productSchema = new mongoose.Schema({
     min: 0,
     default: 0
   },
+  daysToCompleteOrder: {
+    type: String,
+    trim: true,
+    enum: ['1-3', '4-7', '8-14', '15-30', '30+'],
+  },
   quantity: {
     type: Number,
     required: true,
     min: 0,
     default: 0
+  },
+  frozenStock: {
+    type: Number,
+    default: 0,
+    min: 0
   },
   lowStockThreshold: {
     type: Number,
@@ -238,12 +262,22 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  stockType: {
+    type: String,
+    enum: ['instock', 'byorder'],
+    default: 'instock'
+  },
 
   // Physical Properties
   makeModel: {
     type: String,
     trim: true,
     maxlength: [100, 'Make/Model cannot exceed 100 characters']
+  },
+  materialType: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Material Type cannot exceed 50 characters']
   },
   weight: {
     type: Number,
@@ -364,35 +398,38 @@ const productSchema = new mongoose.Schema({
     maxlength: [200, 'Product Warranty cannot exceed 200 characters']
   },
  
-  installationTrainingSupport: {
-    type: String,
-    trim: true,
-    maxlength: [200, 'Installation Training Support cannot exceed 200 characters']
-  },
 
   // Defense Certification
-  defenseCertification: {
-    certified: {
-      type: Boolean,
-      default: false
-    },
-    certificationNumber: {
-      type: String,
-      trim: true
-    },
-    certificationBody: {
-      type: String,
-      trim: true
-    },
-    validUntil: {
-      type: Date
-    },
-    documents: [{
-      name: String,
-      url: String,
-      type: String
-    }]
+  certificationType: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Certification Type cannot exceed 50 characters']
   },
+  defenseCertification: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DefenseCertification',
+    index: true
+  },
+  registrationNumber: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Registration Number cannot exceed 50 characters']
+  },
+  certificationDocs: [{
+    url: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    originalName: {
+      type: String,
+      trim: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 
   // Audit fields
   createdBy: {
@@ -437,6 +474,9 @@ productSchema.virtual('discountPercentage').get(function() {
 
 // Virtual for stock status
 productSchema.virtual('stockStatus').get(function() {
+  // If stockType is 'byorder', return 'by_order' regardless of quantity
+  if (this.stockType === 'byorder') return 'by_order';
+  
   if (!this.trackQuantity) return 'unlimited';
   if (this.quantity <= 0) return 'out_of_stock';
   if (this.quantity <= this.lowStockThreshold) return 'low_stock';

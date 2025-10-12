@@ -68,20 +68,25 @@ const paymentSchema = new mongoose.Schema({
     enum: [
       'credit_card', 
       'debit_card', 
+      'card',             // Generic card payment (Razorpay)
+      'upi',              // UPI payments
+      'netbanking',       // Net Banking (Razorpay)
+      'wallet',           // Digital Wallet (Razorpay)
+      'emi',              // EMI (Razorpay)
       'paypal', 
       'bank_transfer', 
       'cash_on_delivery',
       'manual',           // For manual subscription payments
       'subscription',     // For subscription-related payments
       'razorpay',         // For Indian payment gateway
-      'stripe',           // For international payments
-      'upi'               // For UPI payments
+      'stripe'            // For international payments
     ],
     required: true
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded', 'partially_refunded'],
+    // normalized to requested states
+    enum: ['pending', 'paid', 'failed', 'refund', 'partial_refund', 'rejected'],
     default: 'pending'
   },
   transactionId: String,
@@ -99,8 +104,7 @@ const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   
   // Order Type
@@ -156,18 +160,46 @@ const orderSchema = new mongoose.Schema({
   // Payment
   payment: paymentSchema,
   
+  // Parent/Child relationship for split orders
+  parentOrder: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    index: true
+  },
+  children: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order'
+  }],
+  
   // Order Status
   status: {
     type: String,
     enum: [
       'pending',
-      'confirmed',
-      'processing',
+      'ordered',
+      'dispatched',
       'shipped',
       'delivered',
-      'cancelled',
-      'refunded',
-      'returned'
+      'complete',
+      'expired',
+      'cancelled'
+    ],
+    default: 'pending',
+    index: true
+  },
+  
+  // Delivery Status
+  delivery_status: {
+    type: String,
+    enum: [
+      'pending',
+      'processing',
+      'shipped',
+      'in_transit',
+      'out_for_delivery',
+      'delivered',
+      'failed_delivery',
+      'returned_to_sender'
     ],
     default: 'pending',
     index: true
@@ -182,6 +214,19 @@ const orderSchema = new mongoose.Schema({
   shippedAt: Date,
   deliveredAt: Date,
   cancelledAt: Date,
+  
+  // Delivery Status Timestamps
+  delivery_status_updated_at: {
+    type: Date,
+    default: Date.now
+  },
+  processing_at: Date,
+  shipped_at: Date,
+  in_transit_at: Date,
+  out_for_delivery_at: Date,
+  delivered_at: Date,
+  failed_delivery_at: Date,
+  returned_to_sender_at: Date,
   
   // Notes
   customerNotes: String,
@@ -233,7 +278,8 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ buyer: 1, createdAt: -1 });
 orderSchema.index({ 'items.seller': 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
-orderSchema.index({ orderNumber: 1 }, { unique: true });
+orderSchema.index({ delivery_status: 1, createdAt: -1 });
+orderSchema.index({ parentOrder: 1 });
 
 // Virtual for order age
 orderSchema.virtual('orderAge').get(function() {
@@ -253,7 +299,7 @@ orderSchema.virtual('sellers').get(function() {
 });
 
 // Pre-save middleware to generate order number
-orderSchema.pre('save', async function(next) {
+orderSchema.pre('validate', async function(next) {
   try {
     if (this.isNew) {
       // Only generate order number if it's not already set
@@ -286,7 +332,7 @@ orderSchema.pre('save', async function(next) {
 // Static methods
 orderSchema.statics.getOrdersByBuyer = function(buyerId, options = {}) {
   const { page = 1, limit = 10, status, orderType } = options;
-  const query = { buyer: buyerId };
+  const query = { buyer: buyerId, parentOrder: { $exists: false } };
   if (status) query.status = status;
   if (orderType) query.orderType = orderType;
   
@@ -300,7 +346,7 @@ orderSchema.statics.getOrdersByBuyer = function(buyerId, options = {}) {
 
 orderSchema.statics.getOrdersBySeller = function(sellerId, options = {}) {
   const { page = 1, limit = 10, status } = options;
-  const query = { 'items.seller': sellerId, orderType: { $ne: 'subscription' } }; // Exclude subscription orders
+  const query = { 'items.seller': sellerId, orderType: { $ne: 'subscription' }, parentOrder: { $ne: null } }; // Sellers see only child orders
   if (status) query.status = status;
   
   return this.find(query)
@@ -330,6 +376,35 @@ orderSchema.methods.canBeCancelled = function() {
 
 orderSchema.methods.canBeShipped = function() {
   return this.status === 'confirmed' || this.status === 'processing';
+};
+
+// Method to update delivery status with timestamp
+orderSchema.methods.updateDeliveryStatus = function(newStatus) {
+  const validStatuses = [
+    'pending',
+    'processing', 
+    'shipped',
+    'in_transit',
+    'out_for_delivery',
+    'delivered',
+    'failed_delivery',
+    'returned_to_sender'
+  ];
+  
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error(`Invalid delivery status: ${newStatus}`);
+  }
+  
+  this.delivery_status = newStatus;
+  this.delivery_status_updated_at = new Date();
+  
+  // Set specific timestamp field based on status
+  const timestampField = newStatus.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_at';
+  if (this.schema.paths[timestampField]) {
+    this[timestampField] = new Date();
+  }
+  
+  return this.save();
 };
 
 orderSchema.methods.addMessage = function(fromUserId, message, userType) {

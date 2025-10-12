@@ -35,7 +35,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     : "lg:ml-[70px] xl:ml-[90px]";
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Sidebar and Backdrop */}
       <AppSidebar />
       <Backdrop />
@@ -50,8 +50,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <AppHeader onShowCMS={() => setShowCMSSidebar(true)} />
         {/* Page Content */}
-        <div className="flex-1 p-3 sm:p-4 md:p-6 max-w-7xl mx-auto w-full">
-          {children}
+        <div className="flex-1 p-2 sm:p-3 md:p-4 lg:p-6 max-w-full mx-auto w-full overflow-x-hidden">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </div>
       </div>
     </div>

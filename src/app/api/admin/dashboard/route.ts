@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const Order = (await import("@/models/orderModel")).default;
     const Category = (await import("@/models/categoryModel")).default;
     const Tag = (await import("@/models/tagModel")).default;
-    const Bid = require("@/models/bidModel");
+    const Bid = (await import("@/models/bidModel")).default;
     const Quote = require("@/models/quoteModel");
 
     // Calculate date ranges based on filter parameters

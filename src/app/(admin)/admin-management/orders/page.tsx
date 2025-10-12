@@ -73,14 +73,15 @@ export interface Order {
     phone: string;
   };
   payment: {
-    method: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'cash_on_delivery' | 'manual' | 'subscription' | 'razorpay' | 'stripe' | 'upi';
-    status: 'pending' | 'completed' | 'failed' | 'refunded' | 'partially_refunded';
+    method: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'cash_on_delivery' | 'manual' | 'subscription' | 'razorpay' | 'stripe' | 'upi' | 'card' | 'netbanking' | 'wallet' | 'emi';
+    status: 'pending' | 'paid' | 'failed' | 'refund' | 'partial_refund' | 'rejected';
     transactionId?: string;
     paidAt?: string;
     refundedAt?: string;
     refundAmount?: number;
   };
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'returned';
+  status: 'pending' | 'ordered' | 'dispatched' | 'shipped' | 'delivered' | 'complete' | 'expired' | 'cancelled';
+  delivery_status: 'pending' | 'processing' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed_delivery' | 'returned_to_sender';
   trackingNumber?: string;
   carrier?: string;
   confirmedAt?: string;
@@ -110,6 +111,8 @@ export interface Order {
     autoRenew: boolean;
     subscriptionId?: string;
   };
+  parentOrder?: string;
+  children?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -290,13 +293,13 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             Order Management
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             Manage and track all customer orders
           </p>
         </div>

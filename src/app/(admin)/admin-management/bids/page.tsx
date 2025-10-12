@@ -7,6 +7,7 @@ import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
+import BidFormModal from "@/components/bids/BidFormModal";
 import { useModal } from "@/hooks/useModal";
 
 interface Bid {
@@ -66,7 +67,9 @@ const BidsPage = () => {
   const [totalBids, setTotalBids] = useState(0);
 
   const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
+  const { isOpen: isBidModalOpen, openModal: openBidModal, closeModal: closeBidModal } = useModal();
   const [bidToDelete, setBidToDelete] = useState<string | null>(null);
+  const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
 
   useEffect(() => {
     fetchBids();
@@ -125,7 +128,20 @@ const BidsPage = () => {
     openDeleteModal();
   };
 
-  const getStatusBadge = (status: string) => {
+  const handleOpenBidModal = (bid?: Bid) => {
+    setSelectedBid(bid || null);
+    openBidModal();
+  };
+
+  const handleBidSaved = () => {
+    fetchBids(); // Refresh the list
+  };
+
+  const getStatusBadge = (bid: Bid) => {
+    // Check if bid is expired first
+    const isExpired = new Date(bid.expiresAt) < new Date();
+    const actualStatus = isExpired && bid.status === 'pending' ? 'expired' : bid.status;
+    
     const statusConfig = {
       pending: { color: "yellow", icon: ClockIcon, text: "Pending" },
       accepted: { color: "green", icon: CheckCircleIcon, text: "Accepted" },
@@ -133,7 +149,7 @@ const BidsPage = () => {
       expired: { color: "gray", icon: ClockIcon, text: "Expired" }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[actualStatus as keyof typeof statusConfig];
     const IconComponent = config.icon;
 
     return (
@@ -206,12 +222,13 @@ const BidsPage = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin-management/bids/create">
-            <Button className="flex items-center gap-2">
-              <PlusIcon className="h-4 w-4" />
-              Add Bid
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => handleOpenBidModal()}
+            className="flex items-center gap-2"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Bid
+          </Button>
         </div>
       </div>
 
@@ -351,7 +368,7 @@ const BidsPage = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {getStatusBadge(bid.status)}
+                    {getStatusBadge(bid)}
                   </td>
                   <td className="px-6 py-4">
                     {getPriorityBadge(bid.priority)}
@@ -365,6 +382,13 @@ const BidsPage = () => {
                         {bid.sellerResponses ? 
                           bid.sellerResponses.filter(r => r.status === 'accepted').length : 
                           (bid.sellerResponse?.status === 'accepted' ? 1 : 0)} accepted
+                      </div>
+                    )}
+                    {((bid.sellerResponses?.length || 0) > 0 || bid.sellerResponse) && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {bid.sellerResponses ? 
+                          bid.sellerResponses.filter(r => r.status === 'pending').length : 
+                          (bid.sellerResponse?.status === 'pending' ? 1 : 0)} pending
                       </div>
                     )}
                   </td>
@@ -383,11 +407,13 @@ const BidsPage = () => {
                           <EyeIcon className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Link href={`/admin-management/bids/${bid._id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <EditIcon className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenBidModal(bid)}
+                      >
+                        <EditIcon className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -447,6 +473,14 @@ const BidsPage = () => {
         onConfirm={handleDeleteBid}
         title="Delete Bid"
         message="Are you sure you want to delete this bid? This action cannot be undone."
+      />
+
+      {/* Bid Form Modal */}
+      <BidFormModal
+        isOpen={isBidModalOpen}
+        onClose={closeBidModal}
+        bid={selectedBid}
+        onSaved={handleBidSaved}
       />
     </div>
   );

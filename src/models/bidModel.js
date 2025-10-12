@@ -44,7 +44,12 @@ const bidSchema = new mongoose.Schema({
     index: true
   },
   
-  // Removed product field - bids are now general, not product-specific
+  // Optional: Link to specific product (if bidding on a specific product)
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    index: true
+  },
   
   // Technical Requirements
   technicalRequirements: {
@@ -84,24 +89,33 @@ const bidSchema = new mongoose.Schema({
     default: 'medium'
   },
   
-  // Removed budget range - bids no longer include budget information
+  // Budget Information (optional)
+  budgetRange: {
+    min: {
+      type: Number,
+      min: 0
+    },
+    max: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'USD'
+    }
+  },
   
-  // Seller Responses (multiple sellers can respond to a bid)
-  sellerResponses: [{
+  // Seller Response (when seller accepts/rejects)
+  sellerResponse: {
     seller: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      ref: 'User'
     },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'rejected'],
-      default: 'pending'
+      enum: ['pending', 'accepted', 'rejected']
     },
-    respondedAt: {
-      type: Date,
-      default: Date.now
-    },
+    respondedAt: Date,
     quotedPrice: {
       type: Number,
       min: 0
@@ -114,17 +128,11 @@ const bidSchema = new mongoose.Schema({
       type: String,
       trim: true,
       maxlength: [1000, 'Response notes cannot exceed 1000 characters']
-    },
-    attachments: [{
-      url: String,
-      originalName: String,
-      fileType: String,
-      fileSize: Number
-    }]
-  }],
+    }
+  },
   
-  // Single Seller Response (for backward compatibility)
-  sellerResponse: {
+  // New: multiple seller responses (for multi-seller bids)
+  sellerResponses: [{
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
@@ -134,10 +142,7 @@ const bidSchema = new mongoose.Schema({
       enum: ['pending', 'accepted', 'rejected'],
       default: 'pending'
     },
-    respondedAt: {
-      type: Date,
-      default: Date.now
-    },
+    respondedAt: Date,
     quotedPrice: {
       type: Number,
       min: 0
@@ -150,14 +155,8 @@ const bidSchema = new mongoose.Schema({
       type: String,
       trim: true,
       maxlength: [1000, 'Response notes cannot exceed 1000 characters']
-    },
-    attachments: [{
-      url: String,
-      originalName: String,
-      fileType: String,
-      fileSize: Number
-    }]
-  },
+    }
+  }],
   
   // Comments/Communication
   comments: [bidCommentSchema],
@@ -204,6 +203,7 @@ const bidSchema = new mongoose.Schema({
 // Indexes for performance
 bidSchema.index({ buyer: 1, status: 1 });
 bidSchema.index({ 'sellerResponse.seller': 1, status: 1 });
+bidSchema.index({ 'sellerResponses.seller': 1, status: 1 });
 bidSchema.index({ submittedAt: -1 });
 bidSchema.index({ expiresAt: 1 });
 bidSchema.index({ category: 1, status: 1 });
@@ -226,6 +226,18 @@ bidSchema.pre('save', function(next) {
     this.status = 'expired';
   }
   next();
+});
+
+// Also guard at query-time updates (findOneAndUpdate) to set expired
+bidSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate() || {};
+  // If document is pending and already past expiry, force expired
+  this.model.findOne(this.getQuery()).then((doc) => {
+    if (doc && doc.status === 'pending' && doc.expiresAt < new Date()) {
+      this.setUpdate({ $set: { ...(update.$set || {}), status: 'expired' }, ...update });
+    }
+    next();
+  }).catch(() => next());
 });
 
 // Instance methods
@@ -264,13 +276,13 @@ bidSchema.methods.updateStatus = function(status, sellerId = null, responseData 
 bidSchema.statics.findByBuyer = function(buyerId, status = null) {
   const query = { buyer: buyerId };
   if (status) query.status = status;
-  return this.find(query).populate('buyer sellerResponse.seller product category').sort({ createdAt: -1 });
+  return this.find(query).populate('buyer sellerResponse.seller sellerResponses.seller product category').sort({ createdAt: -1 });
 };
 
 bidSchema.statics.findBySeller = function(sellerId, status = null) {
   const query = { 'sellerResponse.seller': sellerId };
   if (status) query.status = status;
-  return this.find(query).populate('buyer sellerResponse.seller product category').sort({ createdAt: -1 });
+  return this.find(query).populate('buyer sellerResponse.seller sellerResponses.seller product category').sort({ createdAt: -1 });
 };
 
 bidSchema.statics.findPendingBids = function() {
@@ -286,4 +298,4 @@ if (mongoose.models.Bid) {
 }
 
 const Bid = mongoose.model("Bid", bidSchema);
-module.exports = Bid;
+export default Bid;

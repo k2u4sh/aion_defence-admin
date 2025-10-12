@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Suppress hydration warnings for browser extensions
+  reactStrictMode: true,
+  // Add experimental features for better hydration handling
+  experimental: {
+    optimizePackageImports: ['@/components', '@/utils'],
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

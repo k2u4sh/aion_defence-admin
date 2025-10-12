@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminAuth } from "@/utils/adminAccess";
 import { connectToDatabase as connectDB } from "@/lib/db";
-const Bid = require("@/models/bidModel");
-import User from "@/models/userModel";
-import Category from "@/models/categoryModel";
+import mongoose from "mongoose";
 
 // Ensure models are registered
 const ensureModelsRegistered = () => {
-  // These imports will register the models with Mongoose
-  User;
-  Category;
-  Bid;
+  require("@/models/userModel");
+  require("@/models/categoryModel");
+  require("@/models/bidModel");
 };
 
 // GET /api/admin/bids/[id] - Get a specific bid
@@ -32,6 +29,12 @@ export async function GET(
     }
 
     await connectDB();
+
+    // Import models - using dynamic imports for ES modules
+    const Bid = (await import("@/models/bidModel")).default;
+    const User = (await import("@/models/userModel")).default;
+    const Category = (await import("@/models/categoryModel")).default;
+
     const { id } = await params;
 
     const bid = await Bid.findOne({ _id: id, deletedAt: null })
@@ -82,6 +85,12 @@ export async function PUT(
     }
 
     await connectDB();
+
+    // Import models - using dynamic imports for ES modules
+    const Bid = (await import("@/models/bidModel")).default;
+    const User = (await import("@/models/userModel")).default;
+    const Category = (await import("@/models/categoryModel")).default;
+
     const { id } = await params;
 
     const body = await request.json();
@@ -115,7 +124,7 @@ export async function PUT(
     if (status !== undefined) bid.status = status;
     if (expiresAt !== undefined) bid.expiresAt = new Date(expiresAt);
     
-    bid.updatedBy = authCheck.admin?._id;
+    bid.updatedBy = authCheck.admin?._id ? new mongoose.Types.ObjectId(authCheck.admin._id) : undefined;
 
     await bid.save();
 
@@ -161,6 +170,12 @@ export async function DELETE(
     }
 
     await connectDB();
+
+    // Import models - using dynamic imports for ES modules
+    const Bid = (await import("@/models/bidModel")).default;
+    const User = (await import("@/models/userModel")).default;
+    const Category = (await import("@/models/categoryModel")).default;
+
     const { id } = await params;
 
     const bid = await Bid.findOne({ _id: id, deletedAt: null });
@@ -174,7 +189,7 @@ export async function DELETE(
 
     // Soft delete
     bid.deletedAt = new Date();
-    bid.updatedBy = authCheck.admin?._id;
+    bid.updatedBy = authCheck.admin?._id ? new mongoose.Types.ObjectId(authCheck.admin._id) : undefined;
     await bid.save();
 
     return NextResponse.json({

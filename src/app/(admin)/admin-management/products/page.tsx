@@ -11,57 +11,90 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import ResponsiveTable from "@/components/tables/ResponsiveTable";
 import UnifiedPagination from "@/components/common/UnifiedPagination";
+import { getImageUrl, handleImageError } from "@/utils/imageUtils";
 
 interface Product {
   _id: string;
+  slug?: string;
   name: string;
-  slug: string;
   description: string;
-  shortDescription: string;
-  sku: string;
-  barcode?: string;
-  status: 'draft' | 'active' | 'inactive' | 'archived';
+  category: string | { _id: string; name: string };
+  subCategory?: string | { _id: string; name: string };
+  currency: string;
   basePrice: number;
-  comparePrice?: number;
-  cost?: number;
-  quantity: number;
-  quantityPerOrder: number;
-  lowStockThreshold: number;
-  trackQuantity: boolean;
-  allowBackorder: boolean;
-  taxable: boolean;
-  taxRate: number;
-  category: { _id: string; name: string };
-  subCategory?: { _id: string; name: string };
-  tags: Array<{ _id: string; name: string; color: string }>;
-  seller: { _id: string; firstName: string; lastName: string; companyName?: string };
-  images: Array<{ url: string; alt: string; isPrimary: boolean; order: number }>;
-  specifications: Array<{ name: string; value: string; unit?: string }>;
-  makeModel?: string;
+  images?: Array<string | { url?: string; alt?: string; isPrimary?: boolean; order?: number }>;
+  videos?: Array<string | { url?: string; title?: string; description?: string }>;
+  seller?: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+  };
+  tags?: string[] | Array<{ _id: string; name: string; color: string }>;
   weight?: number;
-  weightUnit: 'kg' | 'g';
-  dimensions: { length: number; width: number; height: number };
-  dimensionUnit: 'cm' | 'mm' | 'm' | 'in' | 'ft';
-  isVisible: boolean;
-  isFeatured: boolean;
-  isDigital: boolean;
-  hasVariants: boolean;
-  variants: Array<any>;
-  averageRating: number;
-  totalReviews: number;
-  vendor?: string;
-  supplier?: { _id: string; name: string };
-  defenseCertification?: { _id: string; name: string };
-  publishedAt?: string;
-  availableFrom?: string;
-  availableUntil?: string;
+  pricing?: {
+    basePrice: number;
+    currency: string;
+  };
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+  stockType?: string;
+  reviews?: Array<{
+    rating: number;
+    comment: string;
+    user: string;
+  }>;
+  // Additional fields from ProductService
+  title?: string;
+  productHeading?: string;
+  productDescription?: string;
+  makeModel?: string;
+  materialType?: string;
+  unitsAvailable?: string;
+  daysToCompleteOrder?: string;
+  quantityPerOrder?: string;
+  certificationType?: string;
+  defenseCertification?: string;
+  registrationNumber?: string;
   restrictedBuyerAccess?: string;
   productWarranty?: string;
-  installationTrainingSupport?: string;
-  seo: {
+  certificationDocs?: Array<{
+    url: string;
+    originalName: string;
+    uploadedAt: string;
+  }>;
+  // Legacy fields for backward compatibility
+  shortDescription?: string;
+  sku?: string;
+  barcode?: string;
+  status?: 'draft' | 'active' | 'inactive' | 'archived';
+  comparePrice?: number;
+  cost?: number;
+  quantity?: number;
+  lowStockThreshold?: number;
+  trackQuantity?: boolean;
+  allowBackorder?: boolean;
+  taxable?: boolean;
+  taxRate?: number;
+  weightUnit?: 'kg' | 'g';
+  dimensionUnit?: 'cm' | 'mm' | 'm' | 'in' | 'ft';
+  isVisible?: boolean;
+  isFeatured?: boolean;
+  isDigital?: boolean;
+  hasVariants?: boolean;
+  variants?: Array<any>;
+  averageRating?: number;
+  totalReviews?: number;
+  vendor?: string;
+  supplier?: { _id: string; name: string };
+  specifications?: Array<{ name: string; value: string; unit?: string }>;
+  seo?: {
     metaTitle?: string;
     metaDescription?: string;
-    keywords: string[];
+    keywords?: string[];
     canonicalUrl?: string;
   };
   createdAt: string;
@@ -550,34 +583,78 @@ const ProductsPage = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-12 w-12">
                           {product.images && product.images.length > 0 ? (
-                            <img
-                              className="h-12 w-12 rounded-lg object-cover"
-                              src={product.images.find(img => img.isPrimary)?.url || product.images[0]?.url}
-                              alt={product.name}
-                            />
+                            (() => {
+                              const images = product.images;
+                              let imageUrl = '';
+                              if (typeof images[0] === 'string') {
+                                imageUrl = images[0];
+                              } else {
+                                const primaryImg = images.find(img => typeof img === 'object' && img.isPrimary);
+                                if (primaryImg && typeof primaryImg === 'object') {
+                                  imageUrl = primaryImg.url || '';
+                                } else {
+                                  const firstImg = images[0];
+                                  if (typeof firstImg === 'object') {
+                                    imageUrl = firstImg.url || '';
+                                  } else {
+                                    imageUrl = firstImg || '';
+                                  }
+                                }
+                              }
+                              return imageUrl ? (
+                                <img
+                                  className="h-12 w-12 rounded-lg object-cover border border-gray-200 dark:border-gray-600"
+                                  src={getImageUrl(imageUrl)}
+                                  alt={product.name}
+                                  onError={handleImageError}
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                  <BoxIcon className="h-6 w-6 text-gray-400" />
+                                </div>
+                              );
+                            })()
                           ) : (
-                            <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                              <span className="text-gray-400 dark:text-gray-500 text-xs">No Image</span>
+                            <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                              <BoxIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
                             </div>
                           )}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {product.title && (
+                              <div className="truncate max-w-xs font-medium">{product.title}</div>
+                            )}
+                            {product.productHeading && (
+                              <div className="truncate max-w-xs">{product.productHeading}</div>
+                            )}
                             {product.shortDescription && (
                               <div className="truncate max-w-xs">{product.shortDescription}</div>
                             )}
+                            {product.makeModel && (
+                              <div className="truncate max-w-xs text-xs">{product.makeModel}</div>
+                            )}
+                            {product.videos && product.videos.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-xs text-blue-600 dark:text-blue-400">📹 {product.videos.length} video(s)</span>
+                              </div>
+                            )}
                             {product.tags && product.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
-                                {product.tags.slice(0, 2).map((tag, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                    style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                                  >
-                                    {tag.name}
-                                  </span>
-                                ))}
+                                {product.tags.slice(0, 2).map((tag, index) => {
+                                  const tagName = typeof tag === 'string' ? tag : tag.name;
+                                  const tagColor = typeof tag === 'string' ? '#6B7280' : tag.color;
+                                  return (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                      style={{ backgroundColor: tagColor + '20', color: tagColor }}
+                                    >
+                                      {tagName}
+                                    </span>
+                                  );
+                                })}
                                 {product.tags.length > 2 && (
                                   <span className="text-xs text-gray-500 dark:text-gray-400">+{product.tags.length - 2}</span>
                                 )}
@@ -592,9 +669,13 @@ const ProductsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div>
-                        <div>{product.category?.name || "Uncategorized"}</div>
+                        <div>
+                          {typeof product.category === 'string' ? product.category : product.category?.name || "Uncategorized"}
+                        </div>
                         {product.subCategory && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{product.subCategory.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {typeof product.subCategory === 'string' ? product.subCategory : product.subCategory?.name}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -610,8 +691,8 @@ const ProductsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div>
-                        <div className="font-medium">{product.quantity}</div>
-                        {getStockStatus(product.quantity, product.lowStockThreshold)}
+                        <div className="font-medium">{product.quantity || 0}</div>
+                        {getStockStatus(product.quantity || 0, product.lowStockThreshold || 10)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -629,7 +710,7 @@ const ProductsPage = () => {
                             <span
                               key={i}
                               className={`text-sm ${
-                                i < Math.floor(product.averageRating)
+                                i < Math.floor(product.averageRating || 0)
                                   ? 'text-yellow-400'
                                   : 'text-gray-300 dark:text-gray-600'
                               }`}
@@ -645,7 +726,7 @@ const ProductsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        {getStatusBadge(product.status)}
+                        {getStatusBadge(product.status || 'draft')}
                         {product.isFeatured && (
                           <Badge color="warning" size="sm">Featured</Badge>
                         )}

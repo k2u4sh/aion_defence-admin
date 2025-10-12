@@ -8,6 +8,7 @@ import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
 import SellerResponsesModal from "@/components/bids/SellerResponsesModal";
+import BidFormModal from "@/components/bids/BidFormModal";
 import { useModal } from "@/hooks/useModal";
 
 interface Bid {
@@ -34,6 +35,11 @@ interface Bid {
   duration: string;
   status: 'pending' | 'accepted' | 'rejected' | 'expired';
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  budgetRange?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  };
   sellerResponses?: Array<{
     _id: string;
     seller: {
@@ -104,6 +110,7 @@ const BidDetailPage = () => {
 
   const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
   const { isOpen: isSellerModalOpen, openModal: openSellerModal, closeModal: closeSellerModal } = useModal();
+  const { isOpen: isBidModalOpen, openModal: openBidModal, closeModal: closeBidModal } = useModal();
   const [bidToDelete, setBidToDelete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -154,7 +161,15 @@ const BidDetailPage = () => {
     openDeleteModal();
   };
 
-  const getStatusBadge = (status: string) => {
+  const handleBidSaved = () => {
+    fetchBid(); // Refresh the bid data
+  };
+
+  const getStatusBadge = (status: string, expiresAt?: string) => {
+    // Check if bid is expired first
+    const isExpired = expiresAt && new Date(expiresAt) < new Date();
+    const actualStatus = isExpired && status === 'pending' ? 'expired' : status;
+    
     const statusConfig = {
       pending: { color: "warning" as const, label: "Pending" },
       accepted: { color: "success" as const, label: "Accepted" },
@@ -162,7 +177,7 @@ const BidDetailPage = () => {
       expired: { color: "light" as const, label: "Expired" }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[actualStatus as keyof typeof statusConfig] || statusConfig.pending;
     return <Badge color={config.color}>{config.label}</Badge>;
   };
 
@@ -250,12 +265,14 @@ const BidDetailPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/admin-management/bids/${bid._id}/edit`}>
-            <Button variant="outline" className="flex items-center gap-2">
-              <EditIcon className="h-4 w-4" />
-              Edit Bid
-            </Button>
-          </Link>
+          <Button 
+            onClick={openBidModal}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <EditIcon className="h-4 w-4" />
+            Edit Bid
+          </Button>
           <Button 
             onClick={handleOpenDeleteModal}
             variant="outline" 
@@ -293,12 +310,25 @@ const BidDetailPage = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
-                  <div className="mt-1">{getStatusBadge(bid.status)}</div>
+                  <div className="mt-1">{getStatusBadge(bid.status, bid.expiresAt)}</div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Expires At</label>
                   <p className="text-gray-900 dark:text-white">{formatDate(bid.expiresAt)}</p>
                 </div>
+                {bid.budgetRange && (bid.budgetRange.min || bid.budgetRange.max) && (
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Budget Range</label>
+                    <p className="text-gray-900 dark:text-white">
+                      {bid.budgetRange.min && bid.budgetRange.max 
+                        ? `${bid.budgetRange.currency || 'USD'} ${bid.budgetRange.min.toLocaleString()} - ${bid.budgetRange.max.toLocaleString()}`
+                        : bid.budgetRange.min 
+                          ? `${bid.budgetRange.currency || 'USD'} ${bid.budgetRange.min.toLocaleString()}+`
+                          : `${bid.budgetRange.currency || 'USD'} Up to ${bid.budgetRange.max?.toLocaleString()}`
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -550,6 +580,14 @@ const BidDetailPage = () => {
         onClose={closeSellerModal}
         sellerResponses={bid?.sellerResponses || (bid?.sellerResponse ? [{ ...bid.sellerResponse, _id: bid.sellerResponse._id || 'temp-id', attachments: bid.sellerResponse.attachments || [] }] : [])}
         bidName={bid?.bidName || ""}
+      />
+
+      {/* Bid Form Modal */}
+      <BidFormModal
+        isOpen={isBidModalOpen}
+        onClose={closeBidModal}
+        bid={bid}
+        onSaved={handleBidSaved}
       />
     </div>
   );
