@@ -45,14 +45,14 @@ export default async function Dashboard() {
             {/* Orders Overview */}
             <OrdersOverview />
 
-            {/* Bids and Enquiries Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Bids and Enquiries Row - full width on desktop */}
+            <div className="grid grid-cols-1 gap-6">
               <BidsOverview />
               <EnquiriesOverview />
             </div>
 
-            {/* Products and Users Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Products and Users Row - full width on desktop */}
+            <div className="grid grid-cols-1 gap-6">
               <ProductsOverview />
               <UsersOverview />
             </div>

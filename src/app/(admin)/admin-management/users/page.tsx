@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
-import { PencilIcon, TrashBinIcon, EyeIcon, PlusIcon, GridIcon } from "@/icons";
+import { PencilIcon, EyeIcon, PlusIcon, GridIcon } from "@/icons";
 import UnifiedPagination from "@/components/common/UnifiedPagination";
 
 interface Address {
@@ -76,6 +76,14 @@ interface User {
   createdAt: string;
   fullName: string;
   primaryRole: string;
+  // optional extended fields
+  alternateEmail?: string;
+  bio?: string;
+  preferences?: any;
+  subscription?: any;
+  sellerProfile?: any;
+  addresses?: any[];
+  billingAddresses?: any[];
 }
 
 interface Filters {
@@ -91,8 +99,7 @@ export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -150,6 +157,24 @@ export default function UsersManagementPage() {
         primaryRole: user.roles[0] || 'N/A'
       }));
       setUsers(usersWithFullName);
+
+      // Fetch stats for current page users in parallel
+      const statsResults = await Promise.all(
+        usersWithFullName.map(async (u: any) => {
+          try {
+            const t = localStorage.getItem('accessToken');
+            const res = await fetch(`/api/admin/users/${u._id}/stats`, { headers: t ? { Authorization: `Bearer ${t}` } : undefined });
+            if (!res.ok) return null;
+            const js = await res.json();
+            return { id: u._id, stats: js?.data };
+          } catch {
+            return null;
+          }
+        })
+      );
+      const statsById: Record<string, any> = {};
+      statsResults.filter(Boolean).forEach((r: any) => { statsById[r.id] = r.stats; });
+      setUsers(prev => prev.map((u: any) => ({ ...u, __stats: statsById[u._id] || u.__stats })) as any);
       setTotalPages(data.data.pagination?.totalPages || 1);
       setTotalUsers(data.data.pagination?.total || 0);
     } catch (e: any) {
@@ -176,31 +201,7 @@ export default function UsersManagementPage() {
     setCurrentPage(1);
   };
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
-    try {
-      setSaving(true);
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/users?id=${selectedId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      
-      const data = await res.json();
-      if (!res.ok || !data?.success) throw new Error(data?.message || 'Failed to delete user');
-      
-      setUsers(prev => prev.filter(u => u._id !== selectedId));
-      setShowDeleteModal(false);
-      setSelectedId(null);
-      
-      // Reload users to get updated count
-      await loadUsers();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to delete user');
-    } finally {
-      setSaving(false);
-    }
-  };
+  
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
@@ -214,7 +215,14 @@ export default function UsersManagementPage() {
       roles: [...user.roles],
       isActive: user.isActive,
       isVerified: user.isVerified,
-      isBlocked: user.isBlocked
+      isBlocked: user.isBlocked,
+      alternateEmail: (user as any).alternateEmail,
+      bio: (user as any).bio,
+      preferences: (user as any).preferences,
+      subscription: (user as any).subscription,
+      sellerProfile: (user as any).sellerProfile,
+      addresses: (user as any).addresses,
+      billingAddresses: (user as any).billingAddresses
     });
     setShowEditModal(true);
   };
@@ -606,6 +614,13 @@ export default function UsersManagementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(user)}
+                      {(user as any).__stats && (
+                        <div className="mt-1 text-xs text-gray-600">
+                          <div>Total Sales: {(user as any).__stats.totalSales || 0}</div>
+                          <div>Avg Given: {((user as any).__stats.averageRatingGiven || 0).toFixed?.(2) || '0.00'}</div>
+                          <div>Avg Received: {((user as any).__stats.averageRatingReceived || 0).toFixed?.(2) || '0.00'}</div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.lastLogin ? new Date(user.lastLogin).toISOString().split('T')[0] : 'Never'}
@@ -635,16 +650,7 @@ export default function UsersManagementPage() {
                             <GridIcon width={16} height={16} />
                           </button>
                         )}
-                        <button
-                          onClick={() => {
-                            setSelectedId(user._id);
-                            setShowDeleteModal(true);
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete User"
-                        >
-                          <TrashBinIcon width={16} height={16} />
-                        </button>
+                        
                       </div>
                     </td>
                   </tr>
@@ -664,31 +670,7 @@ export default function UsersManagementPage() {
         onPageChange={setCurrentPage}
       />
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <div className="p-6">
-          <h3 className="text-lg font-medium mb-4">Delete User</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Are you sure you want to delete this user? This action will deactivate the user account and cannot be easily undone.
-          </p>
-          {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={saving}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-            >
-              {saving ? 'Deleting...' : 'Delete User'}
-            </button>
-          </div>
-        </div>
-      </Modal>
+      
 
       {/* Edit User Modal */}
       <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
@@ -713,6 +695,165 @@ export default function UsersManagementPage() {
                   type="text"
                   value={editForm.lastName || ''}
                   onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            {/* Preferences */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pref: Email Notifications</label>
+                <input
+                  type="checkbox"
+                  checked={!!(editForm as any).preferences?.notifications?.email}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    preferences: {
+                      ...(prev as any).preferences,
+                      notifications: {
+                        ...(prev as any).preferences?.notifications,
+                        email: e.target.checked
+                      }
+                    }
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pref: SMS Notifications</label>
+                <input
+                  type="checkbox"
+                  checked={!!(editForm as any).preferences?.notifications?.sms}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    preferences: {
+                      ...(prev as any).preferences,
+                      notifications: {
+                        ...(prev as any).preferences?.notifications,
+                        sms: e.target.checked
+                      }
+                    }
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Newsletter</label>
+                <input
+                  type="checkbox"
+                  checked={!!(editForm as any).preferences?.newsletter}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    preferences: { ...(prev as any).preferences, newsletter: e.target.checked }
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                <input
+                  type="text"
+                  value={(editForm as any).preferences?.language || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    preferences: { ...(prev as any).preferences, language: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+                <input
+                  type="text"
+                  value={(editForm as any).preferences?.timezone || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    preferences: { ...(prev as any).preferences, timezone: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Subscription */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+                <select
+                  value={(editForm as any).subscription?.currentPlan || 'FREE'}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    subscription: { ...(prev as any).subscription, currentPlan: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="FREE">FREE</option>
+                  <option value="GOLD">GOLD</option>
+                  <option value="PLATINUM">PLATINUM</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Billing</label>
+                <select
+                  value={(editForm as any).subscription?.billingCycle || 'monthly'}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    subscription: { ...(prev as any).subscription, billingCycle: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!(editForm as any).subscription?.autoRenew}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev,
+                      subscription: { ...(prev as any).subscription, autoRenew: e.target.checked }
+                    }))}
+                  />
+                  <span>Auto Renew</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Seller Profile (basic) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business License</label>
+                <input
+                  type="text"
+                  value={(editForm as any).sellerProfile?.businessLicense || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    sellerProfile: { ...(prev as any).sellerProfile, businessLicense: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
+                <input
+                  type="text"
+                  value={(editForm as any).sellerProfile?.taxId || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    sellerProfile: { ...(prev as any).sellerProfile, taxId: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
+                <textarea
+                  value={(editForm as any).sellerProfile?.businessDescription || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev,
+                    sellerProfile: { ...(prev as any).sellerProfile, businessDescription: e.target.value }
+                  }))}
+                  rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1070,6 +1211,36 @@ export default function UsersManagementPage() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Corporate Identity Number"
                     />
+                  </div>
+                </div>
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">GST Certificates</label>
+                    <div className="space-y-2">
+                      {Array.isArray(companyForm.gstCertificates) && companyForm.gstCertificates.length > 0 ? (
+                        companyForm.gstCertificates.map((doc, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 border rounded">
+                            <span className="text-sm text-gray-700 truncate" title={doc}>{doc}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500">No GST certificates uploaded</div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">CIN Documents</label>
+                    <div className="space-y-2">
+                      {Array.isArray(companyForm.cinDocuments) && companyForm.cinDocuments.length > 0 ? (
+                        companyForm.cinDocuments.map((doc, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 border rounded">
+                            <span className="text-sm text-gray-700 truncate" title={doc}>{doc}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500">No CIN documents uploaded</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

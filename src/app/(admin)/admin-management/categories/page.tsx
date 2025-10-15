@@ -19,6 +19,7 @@ interface Category {
   name: string;
   slug: string;
   description?: string;
+  productCount?: number;
   parentCategory?: {
     _id: string;
     name: string;
@@ -72,6 +73,8 @@ const CategoriesPage = () => {
   const { isOpen: isImportExportModalOpen, openModal: openImportExportModal, closeModal: closeImportExportModal } = useModal();
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [subcategoryCounts, setSubcategoryCounts] = useState<Record<string, number>>({});
+  const [loadingSubCounts, setLoadingSubCounts] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -99,6 +102,8 @@ const CategoriesPage = () => {
         setStats(data.stats);
         setTotalPages(data.pagination.totalPages);
         setTotalItems(data.pagination.total);
+        // After categories load, fetch subcategory counts for current page
+        fetchSubcategoryCounts(data.data);
       } else {
         setError(data.message || "Failed to fetch categories");
       }
@@ -107,6 +112,30 @@ const CategoriesPage = () => {
       setError("Failed to fetch categories");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubcategoryCounts = async (cats: Category[]) => {
+    try {
+      setLoadingSubCounts(true);
+      const results = await Promise.all(
+        cats.map(async (c) => {
+          try {
+            const params = new URLSearchParams({ page: '1', limit: '1', parentCategory: c._id });
+            const res = await fetch(`/api/admin/categories?${params}`);
+            const json = await res.json();
+            const total = json?.pagination?.total ?? 0;
+            return [c._id, total] as [string, number];
+          } catch {
+            return [c._id, 0] as [string, number];
+          }
+        })
+      );
+      const map: Record<string, number> = {};
+      results.forEach(([id, count]) => { map[id] = count; });
+      setSubcategoryCounts(map);
+    } finally {
+      setLoadingSubCounts(false);
     }
   };
 
@@ -120,10 +149,20 @@ const CategoriesPage = () => {
 
       const data = await response.json();
       if (data.success) {
-        fetchCategories();
+        // Optimistically remove from UI
+        setCategories((prev) => prev.filter((c) => c._id !== categoryToDelete));
+        setTotalItems((prev) => Math.max(0, prev - 1));
         closeDeleteModal();
+        setCategoryToDelete(null);
+        // Background refetch to sync stats/pagination
+        fetchCategories();
       } else {
-        setError(data.message || "Failed to delete category");
+        const apiMessage = data.message || "Failed to delete category";
+        if (apiMessage.toLowerCase().includes("subcategories")) {
+          setError("Cannot delete category with subcategories. Please remove or reassign subcategories first.");
+        } else {
+          setError(apiMessage);
+        }
       }
     } catch (error) {
       console.error("Error deleting category:", error);
@@ -132,6 +171,11 @@ const CategoriesPage = () => {
   };
 
   const handleOpenDeleteModal = (categoryId: string) => {
+    const count = subcategoryCounts[categoryId] ?? 0;
+    if (count > 0) {
+      setError("Cannot delete category with subcategories. Please remove or reassign subcategories first.");
+      return;
+    }
     setCategoryToDelete(categoryId);
     openDeleteModal();
   };
@@ -174,6 +218,31 @@ const CategoriesPage = () => {
     return <Badge color={color}>Level {level}</Badge>;
   };
 
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field) {
+      return <span className="ml-1 text-gray-300 dark:text-gray-500">↕</span>;
+    }
+    return (
+      <span className="ml-1">
+        {sortOrder === "asc" ? (
+          <span className="text-gray-700 dark:text-gray-200">▲</span>
+        ) : (
+          <span className="text-gray-700 dark:text-gray-200">▼</span>
+        )}
+      </span>
+    );
+  };
+
   if (loading && categories.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -187,6 +256,19 @@ const CategoriesPage = () => {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-sm">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="text-sm font-medium underline-offset-2 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -305,22 +387,32 @@ const CategoriesPage = () => {
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Category
+                  <button onClick={() => handleSort('name')} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                    Name <SortIcon field="name" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Level
+                  <button onClick={() => handleSort('level')} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                    Level <SortIcon field="level" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Parent
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Status
+                  <button onClick={() => handleSort('isActive')} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                    Status <SortIcon field="isActive" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Sort Order
+                  <button onClick={() => handleSort('sortOrder')} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                    Sort Order <SortIcon field="sortOrder" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Created
+                  <button onClick={() => handleSort('createdAt')} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                    Created <SortIcon field="createdAt" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
@@ -368,8 +460,14 @@ const CategoriesPage = () => {
                           )}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
                             {category.name}
+                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              {category.productCount ?? 0} products
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                              {loadingSubCounts && subcategoryCounts[category._id] === undefined ? '…' : (subcategoryCounts[category._id] ?? 0)} sub
+                            </span>
                           </div>
                           {category.description && (
                             <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
@@ -418,8 +516,13 @@ const CategoriesPage = () => {
                         </button>
                         <button
                           onClick={() => handleOpenDeleteModal(category._id)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                          title="Delete Category"
+                          className={`text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={
+                            (subcategoryCounts[category._id] ?? 0) > 0
+                              ? "Cannot delete category with subcategories"
+                              : "Delete Category"
+                          }
+                          disabled={(subcategoryCounts[category._id] ?? 0) > 0}
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>

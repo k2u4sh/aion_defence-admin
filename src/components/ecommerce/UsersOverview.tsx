@@ -182,11 +182,13 @@ export const UsersOverview = () => {
               </button>
             </div>
 
-            {/* Add User Button */}
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-              <PlusIcon className="size-4" />
-              Add User
-            </button>
+            {/* Add User Button - redirects to add user page */}
+            <Link href="/admin-management/users/create">
+              <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <PlusIcon className="size-4" />
+                Add User
+              </button>
+            </Link>
           </div>
         </div>
 

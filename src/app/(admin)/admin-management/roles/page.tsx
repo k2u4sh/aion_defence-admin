@@ -93,6 +93,12 @@ export default function RolesPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Role Management</h1>
             <p className="text-gray-600 dark:text-gray-400">Manage system roles and permissions</p>
           </div>
+          <Link href="/admin-management/roles/create">
+            <Button className="flex items-center gap-2">
+              <PlusIcon className="h-4 w-4" />
+              Add Role
+            </Button>
+          </Link>
         </div>
 
       {loading ? (

@@ -18,6 +18,11 @@ interface Enquiry {
   message: string;
   status: 'new' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  productId?: {
+    _id: string;
+    name: string;
+    sku?: string;
+  };
   sellerId: {
     _id: string;
     firstName: string;
@@ -49,6 +54,7 @@ export const EnquiriesOverview = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +62,15 @@ export const EnquiriesOverview = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Debounce search input by 2 seconds after user stops typing
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 2000);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const fetchDashboardData = async () => {
     try {
@@ -112,12 +127,16 @@ export const EnquiriesOverview = () => {
   const filteredEnquiries = dashboardData?.recent.enquiries.filter(enquiry => {
     const matchesStatus = statusFilter === 'all' || enquiry.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || enquiry.priority === priorityFilter;
-    const matchesSearch = enquiry.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         enquiry.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         enquiry.sellerId?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         enquiry.sellerId?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         enquiry.sellerId?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (enquiry.sellerId?.companyName && enquiry.sellerId.companyName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const query = debouncedSearchTerm.toLowerCase();
+    const matchesSearch = query.length === 0 ||
+                         enquiry.subject?.toLowerCase().includes(query) ||
+                         enquiry.message?.toLowerCase().includes(query) ||
+                         enquiry.productId?.name?.toLowerCase().includes(query) ||
+                         enquiry.productId?.sku?.toLowerCase().includes(query) ||
+                         enquiry.sellerId?.firstName?.toLowerCase().includes(query) ||
+                         enquiry.sellerId?.lastName?.toLowerCase().includes(query) ||
+                         enquiry.sellerId?.email?.toLowerCase().includes(query) ||
+                         (enquiry.sellerId?.companyName && enquiry.sellerId.companyName.toLowerCase().includes(query));
     return matchesStatus && matchesPriority && matchesSearch;
   }) || [];
 
@@ -125,20 +144,6 @@ export const EnquiriesOverview = () => {
   const newEnquiries = filteredEnquiries.filter(e => e.status === 'new').length;
   const urgentEnquiries = filteredEnquiries.filter(e => e.priority === 'urgent').length;
   const statusBreakdown = getStatusBreakdown();
-
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -171,7 +176,7 @@ export const EnquiriesOverview = () => {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
               Enquiries Overview
@@ -181,7 +186,7 @@ export const EnquiriesOverview = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Time Filter */}
             <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
@@ -239,7 +244,7 @@ export const EnquiriesOverview = () => {
           <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 size-5" />
           <input
             type="text"
-            placeholder="Search enquiries by subject, message, or user..."
+            placeholder="Search enquiries by subject, product, or user..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
@@ -248,12 +253,20 @@ export const EnquiriesOverview = () => {
       </div>
 
       {/* Enquiries Table */}
+      {filteredEnquiries.length === 0 ? (
+        <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          No enquiries found for the selected filters.
+        </div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Enquiry Details
+                Subject
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Product
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 User
@@ -280,12 +293,21 @@ export const EnquiriesOverview = () => {
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {enquiry.subject}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                      {enquiry.message}
-                    </div>
                     {enquiry.response && (
                       <div className="text-xs text-green-600 dark:text-green-400 mt-1">
                         ✓ Responded on {formatDate(enquiry.response.respondedAt)}
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {enquiry.productId?.name || '—'}
+                    </div>
+                    {enquiry.productId?.sku && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        SKU: {enquiry.productId.sku}
                       </div>
                     )}
                   </div>
@@ -344,6 +366,7 @@ export const EnquiriesOverview = () => {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">

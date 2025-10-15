@@ -17,7 +17,8 @@ export const PERMISSIONS = [
   // Orders
   "order:read",
   "order:write",
-  // CMS
+  // CMS (gated by explicit access)
+  "cms:access",
   "cms:read",
   "cms:write"
 ] as const;
@@ -33,13 +34,12 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     "user:read","user:write",
     "product:read","product:write",
     "order:read","order:write",
-    "cms:read","cms:write"
+    "cms:access","cms:read","cms:write"
   ],
   moderator: [
     "user:read","user:write",
     "product:read","product:write",
-    "order:read",
-    "cms:read","cms:write"
+    "order:read"
   ],
   support: [
     "user:read",

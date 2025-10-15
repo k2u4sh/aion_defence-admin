@@ -40,8 +40,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <Backdrop />
       
-      {/* CMS Sidebar */}
-      <CMSSidebar isOpen={showCMSSidebar} onClose={() => setShowCMSSidebar(false)} />
+      {/* CMS Sidebar disabled by role-permission policy */}
       
       {/* Main Content Area */}
       <div

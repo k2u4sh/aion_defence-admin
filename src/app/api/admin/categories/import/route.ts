@@ -67,30 +67,37 @@ export async function POST(request: NextRequest) {
       created: 0,
       updated: 0,
       skipped: 0,
+      parentLinked: 0,
       errors: [] as any[]
     };
 
-    // Process each category
+    // Build a cache of existing categories for quick lookup
+    const existing = await Category.find({}, { _id: 1, name: 1, slug: 1, level: 1 }).lean();
+    const nameToId = new Map<string, string>();
+    const slugToId = new Map<string, string>();
+    existing.forEach((c: any) => {
+      nameToId.set(String(c.name).toLowerCase(), String(c._id));
+      slugToId.set(String(c.slug).toLowerCase(), String(c._id));
+    });
+
+    // First pass: create/update categories WITHOUT assigning parent
     for (let i = 0; i < data.length; i++) {
       try {
         const categoryData = data[i];
-        
-        // Validate required fields
         if (!categoryData.name) {
-          results.errors.push({
-            row: i + 1,
-            error: "Name is required",
-            data: categoryData
-          });
+          results.errors.push({ row: i + 1, error: "Name is required", data: categoryData });
           results.skipped++;
           continue;
         }
 
-        // Prepare category data
+        const name = String(categoryData.name).trim();
+        const slug = (categoryData.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')).trim();
+
         const categoryPayload: any = {
-          name: categoryData.name.trim(),
-          slug: categoryData.slug || categoryData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          name,
+          slug,
           description: categoryData.description || "",
+          // Level will be set in pass 2 once parent is known
           level: parseInt(categoryData.level) || 0,
           isActive: categoryData.isActive !== undefined ? Boolean(categoryData.isActive) : true,
           sortOrder: parseInt(categoryData.sortOrder) || 0,
@@ -103,63 +110,62 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date()
         };
 
-        // Handle parent category
-        if (categoryData.parentCategory) {
-          if (typeof categoryData.parentCategory === 'string') {
-            // If it's a string, try to find the parent category by name or ID
-            const parentCategory = await Category.findOne({
-              $or: [
-                { name: categoryData.parentCategory },
-                { _id: categoryData.parentCategory }
-              ]
-            });
-            
-            if (parentCategory) {
-              categoryPayload.parentCategory = parentCategory._id;
-              categoryPayload.level = parentCategory.level + 1;
-            }
-          } else if (categoryData.parentCategory._id) {
-            categoryPayload.parentCategory = categoryData.parentCategory._id;
-            categoryPayload.level = (categoryData.parentCategory.level || 0) + 1;
-          }
-        }
-
-        // Check if category already exists
-        const existingCategory = await Category.findOne({
-          $or: [
-            { name: categoryPayload.name },
-            { slug: categoryPayload.slug }
-          ]
-        });
-
-        if (existingCategory) {
+        // find by name/slug
+        const existingId = nameToId.get(name.toLowerCase()) || slugToId.get(slug.toLowerCase());
+        if (existingId) {
           if (updateExisting) {
-            // Update existing category
-            await Category.findByIdAndUpdate(existingCategory._id, categoryPayload, { runValidators: true });
+            await Category.findByIdAndUpdate(existingId, categoryPayload, { runValidators: true });
             results.updated++;
           } else {
-            // Skip existing category
             results.skipped++;
-            results.errors.push({
-              row: i + 1,
-              error: "Category already exists",
-              data: { name: categoryPayload.name, slug: categoryPayload.slug }
-            });
           }
         } else {
-          // Create new category
-          const newCategory = new Category(categoryPayload);
-          await newCategory.save();
+          const created = await Category.create(categoryPayload);
+          nameToId.set(name.toLowerCase(), String(created._id));
+          slugToId.set(slug.toLowerCase(), String(created._id));
           results.created++;
         }
-
       } catch (error: any) {
-        results.errors.push({
-          row: i + 1,
-          error: error.message || "Unknown error",
-          data: data[i]
-        });
+        results.errors.push({ row: i + 1, error: error.message || "Unknown error", data: data[i] });
         results.skipped++;
+      }
+    }
+
+    // Second pass: resolve parentCategory and update level for children
+    for (let i = 0; i < data.length; i++) {
+      const categoryData = data[i];
+      const name = String(categoryData.name || '').trim();
+      const slug = (categoryData.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')).trim();
+      const childId = nameToId.get(name.toLowerCase()) || slugToId.get(slug.toLowerCase());
+      if (!childId) continue;
+
+      const parentRef = categoryData.parentCategory;
+      if (!parentRef) continue;
+
+      let parentId: string | null = null;
+      if (typeof parentRef === 'string') {
+        parentId = nameToId.get(parentRef.toLowerCase()) || slugToId.get(parentRef.toLowerCase()) || null;
+        if (!parentId) {
+          // Try lookup by direct _id string
+          try {
+            const parentDoc = await Category.findOne({ $or: [ { _id: parentRef }, { name: parentRef } ] }, { _id: 1, name: 1, level: 1 }).lean() as any;
+            if (parentDoc && parentDoc._id) {
+              parentId = String(parentDoc._id);
+              if (parentDoc.name) {
+                nameToId.set(String(parentDoc.name).toLowerCase(), parentId);
+              }
+            }
+          } catch {}
+        }
+      } else if (parentRef && parentRef._id) {
+        parentId = String(parentRef._id);
+      }
+
+      if (parentId) {
+        const parentDoc = await Category.findById(parentId, { level: 1 }).lean() as any;
+        const newLevel = ((parentDoc && parentDoc.level) ? parentDoc.level : 0) + 1;
+        await Category.findByIdAndUpdate(childId, { parentCategory: parentId, level: newLevel });
+        results.parentLinked++;
       }
     }
 

@@ -48,7 +48,7 @@ export async function PUT(
 		const User = await getUserModel();
 		const body = await request.json();
 		
-		// Update the user
+		// Update the user with extended fields allowed
 		const updated = await User.findByIdAndUpdate(resolvedParams.id, body, {
 			new: true,
 			runValidators: true

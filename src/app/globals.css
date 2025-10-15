@@ -738,3 +738,58 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* Dashboard Responsive Fixes */
+@media (max-width: 1300px) {
+  .dashboard-metric-card {
+    padding: 0.75rem !important;
+  }
+  
+  .dashboard-metric-card h4 {
+    font-size: 1rem !important;
+  }
+  
+  .dashboard-metric-card span {
+    font-size: 0.75rem !important;
+  }
+  
+  .header-controls {
+    gap: 0.5rem !important;
+  }
+  
+  .header-search-input {
+    width: 16rem !important;
+  }
+  
+  .cms-btn {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-metric-card {
+    padding: 0.5rem !important;
+  }
+  
+  .dashboard-metric-card h4 {
+    font-size: 0.875rem !important;
+  }
+  
+  .dashboard-metric-card span {
+    font-size: 0.6875rem !important;
+  }
+  
+  .header-search {
+    display: none !important;
+  }
+  
+  .cms-btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.6875rem !important;
+  }
+  
+  .header-controls {
+    gap: 0.25rem !important;
+  }
+}

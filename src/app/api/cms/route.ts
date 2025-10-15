@@ -3,6 +3,7 @@ import { connectDB } from "@/utils/db";
 import jwt from 'jsonwebtoken';
 import { ApiResponseHandler, ErrorMessages, SuccessMessages } from "@/utils/apiResponse";
 import { Validator, ValidationSchemas } from "@/utils/validation";
+import { hasPermission } from "@/utils/permissions";
 
 interface JWTPayload {
   userId: string;
@@ -42,6 +43,14 @@ function verifyToken(request: NextRequest): JWTPayload | null {
 // GET - Fetch all CMS content or specific section
 export async function GET(request: NextRequest) {
   try {
+    const user = verifyToken(request);
+    if (!user) {
+      return ApiResponseHandler.error("Unauthorized. Admin access required.", 401);
+    }
+    // Require explicit CMS access
+    if (!hasPermission((user as any).permissions || ["cms:access"], "cms:access")) {
+      return ApiResponseHandler.error("Forbidden", 403);
+    }
     await connectDB();
     const models = await getCMSModels();
     
@@ -155,6 +164,9 @@ export async function POST(request: NextRequest) {
     const user = verifyToken(request);
     if (!user) {
       return ApiResponseHandler.error("Unauthorized. Admin access required.", 401);
+    }
+    if (!hasPermission((user as any).permissions || ["cms:access"], "cms:access")) {
+      return ApiResponseHandler.error("Forbidden", 403);
     }
 
     await connectDB();

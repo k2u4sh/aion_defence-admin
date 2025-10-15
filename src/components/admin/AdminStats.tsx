@@ -65,12 +65,7 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ stats }) => {
     },
   ];
 
-  const roleBreakdown = [
-    { label: "Super Admin", value: stats.superAdmins, color: "bg-purple-500" },
-    { label: "Admin", value: stats.regularAdmins, color: "bg-indigo-500" },
-    { label: "Moderator", value: stats.moderators, color: "bg-blue-500" },
-    { label: "Support", value: stats.supportUsers, color: "bg-green-500" },
-  ];
+  const roleBreakdown: never[] = [];
 
   return (
     <div className="space-y-6 mb-6">
@@ -112,50 +107,9 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ stats }) => {
         ))}
       </div>
 
-      {/* Role Breakdown */}
-      <div className="bg-white rounded-lg shadow dark:bg-gray-800">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-            Admin Role Distribution
-          </h3>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {roleBreakdown.map((role, index) => (
-              <div key={index} className="text-center">
-                <div className={`${role.color} w-3 h-3 rounded-full mx-auto mb-2`}></div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {role.value}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {role.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      
 
-      {/* Status Summary */}
-      <div className="bg-white rounded-lg shadow dark:bg-gray-800">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-            Admin Status Summary
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {stats.activeAdmins}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Active Admins</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {stats.inactiveAdmins}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Inactive Admins</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 };

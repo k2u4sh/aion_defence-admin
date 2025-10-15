@@ -13,6 +13,7 @@ interface User {
   mobile: string;
   companyName: string;
   companyType: string;
+  company?: any;
   roles: string[];
   alternateEmail?: string;
   bio?: string;
@@ -39,17 +40,90 @@ interface User {
     sellerRating: number;
     totalSales: number;
   };
+  billingAddresses?: any[];
+  preferences?: {
+    notifications?: { email?: boolean; sms?: boolean };
+    newsletter?: boolean;
+    language?: string;
+    timezone?: string;
+  };
+  subscription?: {
+    currentPlan?: 'FREE' | 'GOLD' | 'PLATINUM';
+    autoRenew?: boolean;
+    billingCycle?: 'monthly' | 'yearly';
+    planStartDate?: string;
+    planEndDate?: string;
+    subscriptionId?: string;
+  };
 }
 
 interface EditFormData {
   firstName: string;
   lastName: string;
+  email?: string;
   mobile: string;
   companyName: string;
   companyType: string;
   roles: string[];
   alternateEmail?: string;
   bio?: string;
+  // New mapped fields based on schema
+  addresses?: Array<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+    street?: string;
+    city: string;
+    state?: string;
+    country: string;
+    zipCode: string;
+    isDefault: boolean;
+  }>;
+  billingAddresses?: Array<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+    street?: string;
+    city: string;
+    state?: string;
+    country: string;
+    zipCode: string;
+    isDefault: boolean;
+  }>;
+  preferences?: {
+    notifications?: { email?: boolean; sms?: boolean };
+    newsletter?: boolean;
+    language?: string;
+    timezone?: string;
+  };
+  subscription?: {
+    currentPlan?: 'FREE' | 'GOLD' | 'PLATINUM';
+    autoRenew?: boolean;
+    billingCycle?: 'monthly' | 'yearly';
+    planStartDate?: string;
+    planEndDate?: string;
+    subscriptionId?: string;
+  };
+  sellerProfile?: {
+    businessLicense?: string;
+    taxId?: string;
+    businessDescription?: string;
+    businessAddress?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+    };
+    isVerifiedSeller?: boolean;
+    sellerRating?: number;
+    totalSales?: number;
+    joinedAsSellerAt?: string;
+  };
 }
 
 const COMPANY_TYPES = [
@@ -86,13 +160,24 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     loadUser();
+    // Load stats
+    (async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`/api/admin/users/${userId}/stats`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        if (res.ok) {
+          const json = await res.json();
+          setUser(prev => prev ? ({ ...(prev as any), __stats: json.data }) : prev);
+        }
+      } catch {}
+    })();
   }, [userId]);
 
   const loadUser = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       
@@ -114,12 +199,18 @@ export default function UserDetailPage() {
     setEditForm({
       firstName: user.firstName,
       lastName: user.lastName,
+      email: user.email,
       mobile: user.mobile,
-      companyName: user.companyName,
-      companyType: user.companyType,
+      companyName: user.company?.name || user.companyName || '',
+      companyType: (user.company as any)?.type || user.companyType || '',
       roles: [...user.roles],
       alternateEmail: user.alternateEmail,
-      bio: user.bio
+      bio: user.bio,
+      addresses: user.addresses || [],
+      billingAddresses: (user as any).billingAddresses || [],
+      preferences: (user as any).preferences || undefined,
+      subscription: (user as any).subscription || undefined,
+      sellerProfile: user.sellerProfile || undefined
     });
     setEditing(true);
   };
@@ -130,18 +221,39 @@ export default function UserDetailPage() {
     try {
       setSaving(true);
       const token = localStorage.getItem('accessToken');
+      // 1) Update base user fields (exclude company)
+      const { companyName, companyType, ...userPayload } = editForm;
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(userPayload)
       });
       
       if (!response.ok) {
         throw new Error('Failed to update user');
       }
+
+      // 2) Update company fields through admin endpoint to keep user & company in sync
+      const companyPayload = {
+        companyName: companyName || '',
+        companyType: companyType || '',
+        company: (user as any)?.company ? {
+          name: companyName || (user as any)?.company?.name || '',
+          type: companyType || (user as any)?.company?.type || 'individual'
+        } : undefined
+      };
+
+      await fetch(`/api/admin/users/${userId}/company`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(companyPayload)
+      });
       
       await loadUser();
       setEditing(false);
@@ -255,7 +367,7 @@ export default function UserDetailPage() {
   if (!user) return <div className="p-4">User not found</div>;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -389,14 +501,25 @@ export default function UserDetailPage() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Mobile</label>
-                <input
-                  type="tel"
-                  value={editForm?.mobile || ''}
-                  onChange={(e) => setEditForm(prev => ({ ...prev!, mobile: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editForm?.email || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev!, email: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mobile</label>
+                  <input
+                    type="tel"
+                    value={editForm?.mobile || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev!, mobile: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Alternate Email</label>
@@ -476,11 +599,11 @@ export default function UserDetailPage() {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Company Name:</span>
-                <span className="font-medium">{user.companyName}</span>
+                <span className="font-medium">{(user as any)?.company?.name || user.companyName || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Company Type:</span>
-                <span className="font-medium capitalize">{user.companyType}</span>
+                <span className="font-medium capitalize">{(user as any)?.company?.type || user.companyType || '—'}</span>
               </div>
             </div>
           )}
@@ -517,7 +640,209 @@ export default function UserDetailPage() {
           )}
         </div>
 
-        {/* Additional Information */}
+        {/* Preferences */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Preferences</h2>
+          {editing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium mb-1">Notifications</label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!editForm?.preferences?.notifications?.email}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      preferences: {
+                        ...prev!.preferences,
+                        notifications: {
+                          ...prev!.preferences?.notifications,
+                          email: e.target.checked
+                        }
+                      }
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Email</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!editForm?.preferences?.notifications?.sms}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      preferences: {
+                        ...prev!.preferences,
+                        notifications: {
+                          ...prev!.preferences?.notifications,
+                          sms: e.target.checked
+                        }
+                      }
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>SMS</span>
+                </label>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Newsletter</label>
+                  <input
+                    type="checkbox"
+                    checked={!!editForm?.preferences?.newsletter}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      preferences: { ...prev!.preferences, newsletter: e.target.checked }
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Language</label>
+                  <input
+                    type="text"
+                    value={editForm?.preferences?.language || ''}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      preferences: { ...prev!.preferences, language: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Timezone</label>
+                  <input
+                    type="text"
+                    value={editForm?.preferences?.timezone || ''}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      preferences: { ...prev!.preferences, timezone: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div>Notifications: Email {user.preferences?.notifications?.email ? 'On' : 'Off'}, SMS {user.preferences?.notifications?.sms ? 'On' : 'Off'}</div>
+              <div>Newsletter: {user.preferences?.newsletter ? 'Subscribed' : 'Not Subscribed'}</div>
+              <div>Language: {user.preferences?.language || '—'}</div>
+              <div>Timezone: {user.preferences?.timezone || '—'}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Subscription */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Subscription</h2>
+          {editing ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Current Plan</label>
+                <select
+                  value={editForm?.subscription?.currentPlan || 'FREE'}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev!,
+                    subscription: { ...prev!.subscription, currentPlan: e.target.value as any }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="FREE">FREE</option>
+                  <option value="GOLD">GOLD</option>
+                  <option value="PLATINUM">PLATINUM</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Billing Cycle</label>
+                <select
+                  value={editForm?.subscription?.billingCycle || 'monthly'}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev!,
+                    subscription: { ...prev!.subscription, billingCycle: e.target.value as any }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!editForm?.subscription?.autoRenew}
+                    onChange={(e) => setEditForm(prev => ({
+                      ...prev!,
+                      subscription: { ...prev!.subscription, autoRenew: e.target.checked }
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Auto Renew</span>
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div>Plan: {user.subscription?.currentPlan || 'FREE'}</div>
+              <div>Billing: {user.subscription?.billingCycle || 'monthly'}</div>
+              <div>Auto Renew: {user.subscription?.autoRenew ? 'Yes' : 'No'}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Seller Profile (basic) */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Seller Profile</h2>
+          {editing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Business License</label>
+                <input
+                  type="text"
+                  value={editForm?.sellerProfile?.businessLicense || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev!,
+                    sellerProfile: { ...prev!.sellerProfile, businessLicense: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Tax ID</label>
+                <input
+                  type="text"
+                  value={editForm?.sellerProfile?.taxId || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev!,
+                    sellerProfile: { ...prev!.sellerProfile, taxId: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Business Description</label>
+                <textarea
+                  value={editForm?.sellerProfile?.businessDescription || ''}
+                  onChange={(e) => setEditForm(prev => ({
+                    ...prev!,
+                    sellerProfile: { ...prev!.sellerProfile, businessDescription: e.target.value }
+                  }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div>Business License: {user.sellerProfile?.businessLicense || '—'}</div>
+              <div>Tax ID: {user.sellerProfile?.taxId || '—'}</div>
+              <div>Description: {user.sellerProfile?.businessDescription || '—'}</div>
+            </div>
+          )}
+        </div>
+
+      {/* Additional Information */}
         <div className="bg-white p-6 rounded-lg border">
           <h2 className="text-lg font-medium mb-4">Additional Information</h2>
           <div className="space-y-3">
@@ -529,6 +854,10 @@ export default function UserDetailPage() {
               <span className="text-sm text-gray-600">Last Updated:</span>
               <span className="font-medium">{new Date(user.updatedAt).toISOString().split('T')[0]}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Login Attempts:</span>
+              <span className="font-medium">{(user as any).loginAttempts ?? 0}</span>
+            </div>
             {user.sellerProfile && (
               <>
                 <div className="flex justify-between">
@@ -537,13 +866,198 @@ export default function UserDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Total Sales:</span>
-                  <span className="font-medium">{user.sellerProfile.totalSales}</span>
+                  <span className="font-medium">{(user as any).__stats?.totalSales ?? user.sellerProfile.totalSales}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Avg Rating Given (products):</span>
+                  <span className="font-medium">{(user as any).__stats?.averageRatingGiven ? (user as any).__stats.averageRatingGiven.toFixed(2) : '0.00'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Avg Rating Received (products):</span>
+                  <span className="font-medium">{(user as any).__stats?.averageRatingReceived ? (user as any).__stats.averageRatingReceived.toFixed(2) : '0.00'}</span>
                 </div>
               </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Addresses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Addresses</h2>
+          <div className="space-y-3 text-sm">
+            {Array.isArray(user.addresses) && user.addresses.length > 0 ? (
+              user.addresses.map((addr, idx) => (
+                <div key={idx} className="p-3 border rounded">
+                  <div className="font-medium mb-1">{addr.city}, {addr.state} {addr.zipCode}</div>
+                  <div className="text-gray-600">{addr.country}</div>
+                  {addr.street && <div className="text-gray-600">{addr.street}</div>}
+                  <div className="mt-1 text-xs">Default: {addr.isDefault ? 'Yes' : 'No'}</div>
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-500">No addresses</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Billing Addresses</h2>
+          <div className="space-y-3 text-sm">
+            {Array.isArray((user as any).billingAddresses) && (user as any).billingAddresses.length > 0 ? (
+              (user as any).billingAddresses.map((addr: any, idx: number) => (
+                <div key={idx} className="p-3 border rounded">
+                  <div className="font-medium mb-1">{addr.city}, {addr.state} {addr.zipCode}</div>
+                  <div className="text-gray-600">{addr.country}</div>
+                  {addr.street && <div className="text-gray-600">{addr.street}</div>}
+                  <div className="mt-1 text-xs">Default: {addr.isDefault ? 'Yes' : 'No'}</div>
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-500">No billing addresses</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Company Details (read-only summary) */}
+      <div className="bg-white p-6 rounded-lg border mt-6">
+        <h2 className="text-lg font-medium mb-4">Company Details</h2>
+        {((user as any).company || user.companyName) ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-gray-600">Company Name</div>
+              <div className="font-medium">{(user as any)?.company?.name || user.companyName || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Company Type</div>
+              <div className="font-medium capitalize">{user.companyType || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Website</div>
+              <div className="font-medium">{(user as any)?.company?.website || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Registration Number</div>
+              <div className="font-medium">{(user as any)?.company?.registrationNumber || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Year Established</div>
+              <div className="font-medium">{(user as any)?.company?.yearEstablished || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Employees</div>
+              <div className="font-medium">{(user as any)?.company?.numEmployees || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">GST Number</div>
+              <div className="font-medium">{(user as any)?.company?.gstNumber || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">CIN</div>
+              <div className="font-medium">{(user as any)?.company?.cin || '—'}</div>
+            </div>
+            <div className="md:col-span-3">
+              <div className="text-gray-600">Description</div>
+              <div className="font-medium">{(user as any)?.company?.description || '—'}</div>
+            </div>
+            <div className="md:col-span-3">
+              <div className="text-gray-600">GST Certificates</div>
+              <div className="font-medium">
+                {Array.isArray((user as any)?.company?.gstCertificates) && (user as any).company.gstCertificates.length > 0
+                  ? (user as any).company.gstCertificates.join(', ')
+                  : '—'}
+              </div>
+            </div>
+            <div className="md:col-span-3">
+              <div className="text-gray-600">CIN Documents</div>
+              <div className="font-medium">
+                {Array.isArray((user as any)?.company?.cinDocuments) && (user as any).company.cinDocuments.length > 0
+                  ? (user as any).company.cinDocuments.join(', ')
+                  : '—'}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-500 text-sm">No company details available</div>
+        )}
+      </div>
+
+      {/* Subscription Details (extended) */}
+      <div className="bg-white p-6 rounded-lg border mt-6">
+        <h2 className="text-lg font-medium mb-4">Subscription Details</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-gray-600">Plan</div>
+            <div className="font-medium">{(user as any)?.subscription?.currentPlan || 'FREE'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Billing Cycle</div>
+            <div className="font-medium">{(user as any)?.subscription?.billingCycle || 'monthly'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Auto Renew</div>
+            <div className="font-medium">{(user as any)?.subscription?.autoRenew ? 'Yes' : 'No'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Subscription ID</div>
+            <div className="font-medium">{(user as any)?.subscription?.subscriptionId || '—'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Start Date</div>
+            <div className="font-medium">{(user as any)?.subscription?.planStartDate ? new Date((user as any).subscription.planStartDate).toISOString().split('T')[0] : '—'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">End Date</div>
+            <div className="font-medium">{(user as any)?.subscription?.planEndDate ? new Date((user as any).subscription.planEndDate).toISOString().split('T')[0] : '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* OTP Details (read-only) */}
+      <div className="bg-white p-6 rounded-lg border mt-6">
+        <h2 className="text-lg font-medium mb-4">OTP (Read-only)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-gray-600">Type</div>
+            <div className="font-medium">{(user as any)?.otp?.type || '—'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Expires At</div>
+            <div className="font-medium">{(user as any)?.otp?.expiresAt ? new Date((user as any).otp.expiresAt).toISOString().split('T')[0] : '—'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Attempts</div>
+            <div className="font-medium">{(user as any)?.otp?.attempts ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-gray-600">Used</div>
+            <div className="font-medium">{(user as any)?.otp?.isUsed ? 'Yes' : 'No'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Seller Profile Details (read-only) */}
+      {user.sellerProfile && (
+        <div className="bg-white p-6 rounded-lg border mt-6">
+          <h2 className="text-lg font-medium mb-4">Seller Profile Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-gray-600">Business License</div>
+              <div className="font-medium">{user.sellerProfile.businessLicense || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Tax ID (TIN)</div>
+              <div className="font-medium">{user.sellerProfile.taxId || '—'}</div>
+            </div>
+            <div className="md:col-span-3">
+              <div className="text-gray-600">Business Description</div>
+              <div className="font-medium">{user.sellerProfile.businessDescription || '—'}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Actions */}
       {editing && (

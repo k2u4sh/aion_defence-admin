@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
 import Category from "@/models/categoryModel";
+import Product from "@/models/productModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
 
 // Ensure models are registered
@@ -41,10 +42,13 @@ export async function GET(
       );
     }
 
+    // Attach product count for this category
+    const productCount = await Product.countDocuments({ category: id, deletedAt: null });
+
     return NextResponse.json({
       success: true,
       message: "Category fetched successfully",
-      data: category
+      data: { ...category, productCount }
     });
 
   } catch (error) {
@@ -181,15 +185,11 @@ export async function DELETE(
       );
     }
 
-    // Soft delete the category
-    const category = await Category.findByIdAndUpdate(
-      id,
-      { 
-        deletedAt: new Date(),
-        updatedBy: adminId
-      },
-      { new: true }
-    );
+    // Count products associated with this category
+    const productCount = await Product.countDocuments({ category: id, deletedAt: null });
+
+    // Permanently delete the category (hard delete)
+    const category = await Category.findByIdAndDelete(id);
 
     if (!category) {
       return NextResponse.json(
@@ -200,7 +200,8 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Category deleted successfully"
+      message: "Category deleted successfully",
+      data: { productCount }
     });
 
   } catch (error) {

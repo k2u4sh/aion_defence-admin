@@ -16,6 +16,56 @@ interface UserFormData {
   roles: string[];
   alternateEmail?: string;
   bio?: string;
+  // New mapped fields
+  addresses?: Array<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+    street?: string;
+    city: string;
+    state?: string;
+    country: string;
+    zipCode: string;
+    isDefault: boolean;
+  }>;
+  billingAddresses?: Array<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+    street?: string;
+    city: string;
+    state?: string;
+    country: string;
+    zipCode: string;
+    isDefault: boolean;
+  }>;
+  preferences?: {
+    notifications?: { email?: boolean; sms?: boolean };
+    newsletter?: boolean;
+    language?: string;
+    timezone?: string;
+  };
+  subscription?: {
+    currentPlan?: 'FREE' | 'GOLD' | 'PLATINUM';
+    autoRenew?: boolean;
+    billingCycle?: 'monthly' | 'yearly';
+  };
+  sellerProfile?: {
+    businessLicense?: string;
+    taxId?: string;
+    businessDescription?: string;
+    businessAddress?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+    };
+  };
 }
 
 const COMPANY_TYPES = [
@@ -43,7 +93,11 @@ export default function CreateUserPage() {
     mobile: "",
     companyName: "",
     companyType: "individual",
-    roles: ["buyer"]
+    roles: ["buyer"],
+    addresses: [],
+    billingAddresses: [],
+    preferences: { notifications: { email: true, sms: false }, newsletter: true, language: "en", timezone: "UTC" },
+    subscription: { currentPlan: 'FREE', autoRenew: true, billingCycle: 'monthly' }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +105,41 @@ export default function CreateUserPage() {
 
   const handleInputChange = (field: keyof UserFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addAddress = (type: 'addresses' | 'billingAddresses') => {
+    setFormData(prev => ({
+      ...prev,
+      [type]: [
+        ...((prev as any)[type] || []),
+        { firstName: '', lastName: '', email: '', mobile: '', address: '', street: '', city: '', state: '', country: '', zipCode: '', isDefault: (prev as any)[type]?.length ? false : true }
+      ]
+    }));
+  };
+
+  const removeAddress = (type: 'addresses' | 'billingAddresses', index: number) => {
+    setFormData(prev => {
+      const list = [ ...((prev as any)[type] || []) ];
+      list.splice(index, 1);
+      // ensure at least one default remains if any items
+      if (list.length > 0 && !list.some((a: any) => a.isDefault)) {
+        list[0].isDefault = true;
+      }
+      return { ...prev, [type]: list } as any;
+    });
+  };
+
+  const setAddressField = (type: 'addresses' | 'billingAddresses', index: number, field: string, value: any) => {
+    setFormData(prev => {
+      const list = [ ...((prev as any)[type] || []) ];
+      const updated = { ...(list[index] || {}) };
+      if (field === 'isDefault' && value) {
+        list.forEach((a: any, i: number) => { list[i] = { ...a, isDefault: i === index }; });
+      }
+      updated[field] = value;
+      list[index] = updated;
+      return { ...prev, [type]: list } as any;
+    });
   };
 
   const handleRoleToggle = (role: string) => {
@@ -248,6 +337,86 @@ export default function CreateUserPage() {
           </div>
         </div>
 
+        {/* Addresses */}
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium">Addresses</h2>
+            <button type="button" onClick={() => addAddress('addresses')} className="px-3 py-1 text-sm border rounded hover:bg-gray-50">Add Address</button>
+          </div>
+          <div className="space-y-4">
+            {(formData.addresses || []).map((addr, idx) => (
+              <div key={idx} className="border rounded p-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input type="text" placeholder="First Name" value={addr.firstName || ''} onChange={(e) => setAddressField('addresses', idx, 'firstName', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Last Name" value={addr.lastName || ''} onChange={(e) => setAddressField('addresses', idx, 'lastName', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="email" placeholder="Email" value={addr.email || ''} onChange={(e) => setAddressField('addresses', idx, 'email', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input type="text" placeholder="Mobile" value={addr.mobile || ''} onChange={(e) => setAddressField('addresses', idx, 'mobile', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Address" value={addr.address || ''} onChange={(e) => setAddressField('addresses', idx, 'address', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Street" value={addr.street || ''} onChange={(e) => setAddressField('addresses', idx, 'street', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <input type="text" placeholder="City" value={addr.city || ''} onChange={(e) => setAddressField('addresses', idx, 'city', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="State" value={addr.state || ''} onChange={(e) => setAddressField('addresses', idx, 'state', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Country" value={addr.country || ''} onChange={(e) => setAddressField('addresses', idx, 'country', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Zip/Pin" value={addr.zipCode || ''} onChange={(e) => setAddressField('addresses', idx, 'zipCode', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={!!addr.isDefault} onChange={(e) => setAddressField('addresses', idx, 'isDefault', e.target.checked)} className="rounded border-gray-300 text-blue-600" />
+                    Default Address
+                  </label>
+                  <button type="button" onClick={() => removeAddress('addresses', idx)} className="text-sm text-red-600 hover:underline">Remove</button>
+                </div>
+              </div>
+            ))}
+            {(formData.addresses || []).length === 0 && (
+              <div className="text-sm text-gray-500">No addresses added</div>
+            )}
+          </div>
+        </div>
+
+        {/* Billing Addresses */}
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium">Billing Addresses</h2>
+            <button type="button" onClick={() => addAddress('billingAddresses')} className="px-3 py-1 text-sm border rounded hover:bg-gray-50">Add Billing Address</button>
+          </div>
+          <div className="space-y-4">
+            {(formData.billingAddresses || []).map((addr, idx) => (
+              <div key={idx} className="border rounded p-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input type="text" placeholder="First Name" value={addr.firstName || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'firstName', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Last Name" value={addr.lastName || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'lastName', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="email" placeholder="Email" value={addr.email || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'email', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <input type="text" placeholder="Mobile" value={addr.mobile || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'mobile', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Address" value={addr.address || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'address', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Street" value={addr.street || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'street', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <input type="text" placeholder="City" value={addr.city || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'city', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="State" value={addr.state || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'state', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Country" value={addr.country || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'country', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <input type="text" placeholder="Zip/Pin" value={addr.zipCode || ''} onChange={(e) => setAddressField('billingAddresses', idx, 'zipCode', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={!!addr.isDefault} onChange={(e) => setAddressField('billingAddresses', idx, 'isDefault', e.target.checked)} className="rounded border-gray-300 text-blue-600" />
+                    Default Billing Address
+                  </label>
+                  <button type="button" onClick={() => removeAddress('billingAddresses', idx)} className="text-sm text-red-600 hover:underline">Remove</button>
+                </div>
+              </div>
+            ))}
+            {(formData.billingAddresses || []).length === 0 && (
+              <div className="text-sm text-gray-500">No billing addresses added</div>
+            )}
+          </div>
+        </div>
+
         {/* Roles */}
         <div className="bg-white p-6 rounded-lg border">
           <h2 className="text-lg font-medium mb-4">User Roles *</h2>
@@ -281,6 +450,177 @@ export default function CreateUserPage() {
               className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter user bio (optional)"
             />
+          </div>
+        </div>
+
+        {/* Preferences */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Preferences</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium mb-1">Notifications</label>
+              <label className="flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!formData.preferences?.notifications?.email}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    preferences: {
+                      ...prev.preferences,
+                      notifications: { ...prev.preferences?.notifications, email: e.target.checked }
+                    }
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>Email</span>
+              </label>
+              <label className="flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!formData.preferences?.notifications?.sms}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    preferences: {
+                      ...prev.preferences,
+                      notifications: { ...prev.preferences?.notifications, sms: e.target.checked }
+                    }
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>SMS</span>
+              </label>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Newsletter</label>
+                <input
+                  type="checkbox"
+                  checked={!!formData.preferences?.newsletter}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    preferences: { ...prev.preferences, newsletter: e.target.checked }
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Language</label>
+                <input
+                  type="text"
+                  value={formData.preferences?.language || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    preferences: { ...prev.preferences, language: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Timezone</label>
+                <input
+                  type="text"
+                  value={formData.preferences?.timezone || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    preferences: { ...prev.preferences, timezone: e.target.value }
+                  }))}
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Subscription */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Subscription</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Current Plan</label>
+              <select
+                value={formData.subscription?.currentPlan || 'FREE'}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  subscription: { ...prev.subscription, currentPlan: e.target.value as any }
+                }))}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="FREE">FREE</option>
+                <option value="GOLD">GOLD</option>
+                <option value="PLATINUM">PLATINUM</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Billing Cycle</label>
+              <select
+                value={formData.subscription?.billingCycle || 'monthly'}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  subscription: { ...prev.subscription, billingCycle: e.target.value as any }
+                }))}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!formData.subscription?.autoRenew}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    subscription: { ...prev.subscription, autoRenew: e.target.checked }
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>Auto Renew</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Seller Profile (basic) */}
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-lg font-medium mb-4">Seller Profile</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Business License</label>
+              <input
+                type="text"
+                value={formData.sellerProfile?.businessLicense || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  sellerProfile: { ...prev.sellerProfile, businessLicense: e.target.value }
+                }))}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Tax ID</label>
+              <input
+                type="text"
+                value={formData.sellerProfile?.taxId || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  sellerProfile: { ...prev.sellerProfile, taxId: e.target.value }
+                }))}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Business Description</label>
+              <textarea
+                value={formData.sellerProfile?.businessDescription || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  sellerProfile: { ...prev.sellerProfile, businessDescription: e.target.value }
+                }))}
+                rows={3}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
           </div>
         </div>
 

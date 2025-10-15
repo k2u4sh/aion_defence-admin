@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 			return ApiResponseHandler.error("User with this email already exists", 400);
 		}
 
-		// Create user
+		// Create user with extended mapped fields
 		const user = new User({
 			firstName,
 			lastName,
@@ -125,7 +125,14 @@ export async function POST(request: NextRequest) {
 			roles: Array.isArray(roles) ? roles : [roles],
 			companyType: body.companyType || "individual",
 			isActive: true,
-			isVerified: false
+			isVerified: false,
+			alternateEmail: body.alternateEmail,
+			bio: body.bio,
+			addresses: Array.isArray(body.addresses) ? body.addresses : [],
+			billingAddresses: Array.isArray(body.billingAddresses) ? body.billingAddresses : [],
+			preferences: body.preferences,
+			subscription: body.subscription,
+			sellerProfile: body.sellerProfile
 		});
 
 		await user.save();

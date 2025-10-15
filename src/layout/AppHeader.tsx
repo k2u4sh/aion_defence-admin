@@ -46,7 +46,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onShowCMS }) => {
   }, []);
 
   return (
-    <header className="sticky top-0 flex w-full bg-white border-gray-200 z-50 dark:border-gray-800 dark:bg-gray-900 border-b shadow-sm">
+    <header className="sticky top-0 flex w-full bg-white border-gray-200 z-50 dark:border-gray-800 dark:bg-gray-900 border-b shadow-sm app-header">
       <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-2 xl:px-4">
         <div className="flex items-center justify-between w-full gap-1 px-2 py-2 border-b border-gray-200 dark:border-gray-800 sm:gap-2 sm:px-3 sm:py-3 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
           <button
@@ -125,20 +125,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onShowCMS }) => {
             </svg>
           </button>
 
-          <div className="hidden lg:flex lg:items-center lg:space-x-2 xl:space-x-4">
-            {/* CMS Button */}
-            <button
-              onClick={onShowCMS}
-              className="flex items-center space-x-1 px-2 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors xl:space-x-2 xl:px-4 xl:py-2 xl:text-sm"
-            >
-              <LayoutIcon width={14} height={14} className="xl:w-4 xl:h-4" />
-              <span>CMS</span>
-            </button>
+          <div className="hidden lg:flex lg:items-center lg:space-x-2 xl:space-x-4 header-controls">
+            {/* CMS Button removed by role-permission policy */}
             
             {/* Theme Toggle for Desktop */}
             <ThemeToggleButton />
             
-            <form>
+            <form className="header-search">
               <div className="relative">
                 <span className="absolute -translate-y-1/2 left-3 top-1/2 pointer-events-none sm:left-4">
                   <svg
@@ -161,7 +154,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onShowCMS }) => {
                   ref={inputRef}
                   type="text"
                   placeholder="Search..."
-                  className="dark:bg-dark-900 h-9 w-full rounded-lg border border-gray-200 bg-transparent py-2 pl-10 pr-12 text-xs text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 sm:h-10 sm:text-sm sm:pl-12 sm:pr-14 lg:w-80 xl:w-96"
+                  className="dark:bg-dark-900 h-9 w-full rounded-lg border border-gray-200 bg-transparent py-2 pl-10 pr-12 text-xs text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 sm:h-10 sm:text-sm sm:pl-12 sm:pr-14 lg:w-80 xl:w-96 header-search-input"
                 />
 
                 <button className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400 sm:right-2.5 sm:px-[7px] sm:py-[4.5px]">

@@ -37,6 +37,7 @@ class PermissionsRolesSeedMigration extends BaseMigration {
       { key: 'product:write', name: 'Manage Products', category: 'products' },
       { key: 'order:read', name: 'Read Orders', category: 'orders' },
       { key: 'order:write', name: 'Manage Orders', category: 'orders' },
+      { key: 'cms:access', name: 'Access CMS', category: 'cms' },
       { key: 'cms:read', name: 'Read CMS', category: 'cms' },
       { key: 'cms:write', name: 'Manage CMS', category: 'cms' }
     ];
@@ -48,7 +49,7 @@ class PermissionsRolesSeedMigration extends BaseMigration {
     const roles = [
       { key: 'super_admin', name: 'Super Admin', permissions: ['*'] },
       { key: 'admin', name: 'Admin', permissions: permissions.map(p => p.key) },
-      { key: 'moderator', name: 'Moderator', permissions: ['user:read','user:write','product:read','product:write','order:read','cms:read','cms:write'] },
+      { key: 'moderator', name: 'Moderator', permissions: ['user:read','user:write','product:read','product:write','order:read'] },
       { key: 'support', name: 'Support', permissions: ['user:read','order:read'] }
     ];
 

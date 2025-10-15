@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
       { name: "Admins", path: "/admin-management/admins", pro: false },
       { name: "Groups", path: "/admin-management/groups", pro: false },
       { name: "Roles", path: "/admin-management/roles", pro: false },
-      { name: "CMS", path: "/admin-management/cms", pro: false },
+      // CMS hidden by role-permission policy
     ],
   },
 ];

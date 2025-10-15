@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
 import Category from "@/models/categoryModel";
+import Product from "@/models/productModel";
 import { requireAdminAuth } from "@/utils/adminAccess";
 
 // Ensure models are registered
@@ -72,6 +73,19 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    // Attach product counts per category
+    const categoryIds = categories.map(c => c._id);
+    const counts = await Product.aggregate([
+      { $match: { category: { $in: categoryIds }, deletedAt: null } },
+      { $group: { _id: "$category", count: { $sum: 1 } } }
+    ]);
+    const idToCount: Record<string, number> = {} as any;
+    counts.forEach((c: any) => { idToCount[String(c._id)] = c.count; });
+    const categoriesWithCounts = categories.map(c => ({
+      ...c,
+      productCount: idToCount[String(c._id)] || 0
+    }));
+
     // Get total count
     const total = await Category.countDocuments(query);
 
@@ -101,7 +115,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Categories fetched successfully",
-      data: categories,
+      data: categoriesWithCounts,
       pagination: {
         page,
         limit,

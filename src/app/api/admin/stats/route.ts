@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Get dynamic imports for models
     const User = (await import("@/models/userModel")).default;
+    const Admin = (await import("@/models/adminModel")).default;
     const Product = (await import("@/models/productModel")).default;
     const Order = (await import("@/models/orderModel")).default;
     const Category = (await import("@/models/categoryModel")).default;
@@ -81,6 +82,14 @@ export async function GET(request: NextRequest) {
       Order.countDocuments({ createdAt: { $gte: prevYearStart, $lt: startOfYear } })
     ]);
 
+    // Admin role distribution
+    const adminRolesAgg = await Admin.aggregate([
+      { $match: { deletedAt: { $in: [null, undefined] } } },
+      { $group: { _id: "$role", count: { $sum: 1 } } }
+    ]);
+    const adminRoleDistribution: Record<string, number> = {};
+    adminRolesAgg.forEach((r: any) => { adminRoleDistribution[r._id || 'unknown'] = r.count; });
+
     const stats = {
       overview: {
         totalUsers,
@@ -116,6 +125,10 @@ export async function GET(request: NextRequest) {
           count: yearlyOrders,
           growth: calculateGrowth(yearlyOrders, prevYearOrders)
         }
+      }
+      ,
+      admin: {
+        roleDistribution: adminRoleDistribution
       }
     };
 
