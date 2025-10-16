@@ -32,7 +32,10 @@ export async function GET(
     // Get user with company information
     const user = await User.findById(id)
       .select("-password")
-      .populate("company")
+      .populate({
+        path: "company",
+        select: "name description website logo parentCompany parentCompanyNotAvailable parentCompanyDescription registrationNumber yearEstablished numEmployees servicesOffered currency gstNumber gstCertificates cin cinDocuments categories natureOfBusiness typeOfBusiness subscriptionPlan agreedToTerms addresses mailingAddresses users brochures createdAt updatedAt"
+      })
       .lean();
 
     if (!user) {

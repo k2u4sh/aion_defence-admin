@@ -361,26 +361,7 @@ const ProductDetailPage = () => {
                 <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap">{product.description}</p>
               </div>
               
-              {product.title && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.title}</p>
-                </div>
-              )}
-
-              {product.productHeading && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Heading</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.productHeading}</p>
-                </div>
-              )}
-
-              {product.productDescription && (
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Description</label>
-                  <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap">{product.productDescription}</p>
-                </div>
-              )}
+              
 
               {product.shortDescription && (
                 <div className="md:col-span-2">
@@ -403,26 +384,7 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {product.unitsAvailable && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Units Available</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.unitsAvailable}</p>
-                </div>
-              )}
-
-              {product.daysToCompleteOrder && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Days to Complete Order</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.daysToCompleteOrder}</p>
-                </div>
-              )}
-
-              {product.quantityPerOrder && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Quantity Per Order</label>
-                  <p className="mt-1 text-gray-900 dark:text-white">{product.quantityPerOrder}</p>
-                </div>
-              )}
+              
 
               {product.restrictedBuyerAccess && (
                 <div className="md:col-span-2">

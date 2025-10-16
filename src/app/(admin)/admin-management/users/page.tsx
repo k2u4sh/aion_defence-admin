@@ -227,37 +227,104 @@ export default function UsersManagementPage() {
     setShowEditModal(true);
   };
 
-  const handleEditCompany = (user: User) => {
+  const handleEditCompany = async (user: User) => {
     setEditingUser(user);
-    const companyData = {
-      name: user.company?.name || user.companyName || "",
-      description: user.company?.description || "",
-      website: user.company?.website || "",
-      logo: user.company?.logo || "",
-      parentCompany: user.company?.parentCompany || "",
-      parentCompanyNotAvailable: user.company?.parentCompanyNotAvailable || false,
-      parentCompanyDescription: user.company?.parentCompanyDescription || "",
-      registrationNumber: user.company?.registrationNumber || "",
-      yearEstablished: user.company?.yearEstablished || "",
-      numEmployees: user.company?.numEmployees || "",
-      servicesOffered: user.company?.servicesOffered || "",
-      currency: user.company?.currency || "",
-      gstNumber: user.company?.gstNumber || "",
-      cin: user.company?.cin || "",
-      natureOfBusiness: user.company?.natureOfBusiness || [],
-      typeOfBusiness: user.company?.typeOfBusiness || [],
-      categories: user.company?.categories || [],
-      subscriptionPlan: user.company?.subscriptionPlan || "single",
-      agreedToTerms: user.company?.agreedToTerms || false,
-      addresses: user.company?.addresses || [],
-      mailingAddresses: user.company?.mailingAddresses || [],
-      users: user.company?.users || [],
-      brochures: user.company?.brochures || [],
-      gstCertificates: user.company?.gstCertificates || [],
-      cinDocuments: user.company?.cinDocuments || []
-    };
-    
-    setCompanyForm(companyData);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const res = await fetch(`/api/admin/users/${user._id}/company`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      if (res.ok) {
+        const js = await res.json();
+        const apiCompany = js?.data?.company || {};
+        const companyData = {
+          name: apiCompany?.name || user.company?.name || user.companyName || "",
+          description: apiCompany?.description || user.company?.description || "",
+          website: apiCompany?.website || user.company?.website || "",
+          logo: apiCompany?.logo || user.company?.logo || "",
+          parentCompany: apiCompany?.parentCompany || user.company?.parentCompany || "",
+          parentCompanyNotAvailable: apiCompany?.parentCompanyNotAvailable || user.company?.parentCompanyNotAvailable || false,
+          parentCompanyDescription: apiCompany?.parentCompanyDescription || user.company?.parentCompanyDescription || "",
+          registrationNumber: apiCompany?.registrationNumber || user.company?.registrationNumber || "",
+          yearEstablished: apiCompany?.yearEstablished || user.company?.yearEstablished || "",
+          numEmployees: apiCompany?.numEmployees || user.company?.numEmployees || "",
+          servicesOffered: apiCompany?.servicesOffered || user.company?.servicesOffered || "",
+          currency: apiCompany?.currency || user.company?.currency || "",
+          gstNumber: apiCompany?.gstNumber || user.company?.gstNumber || "",
+          cin: apiCompany?.cin || user.company?.cin || "",
+          natureOfBusiness: apiCompany?.natureOfBusiness || user.company?.natureOfBusiness || [],
+          typeOfBusiness: apiCompany?.typeOfBusiness || user.company?.typeOfBusiness || [],
+          categories: apiCompany?.categories || user.company?.categories || [],
+          subscriptionPlan: apiCompany?.subscriptionPlan || user.company?.subscriptionPlan || "single",
+          agreedToTerms: apiCompany?.agreedToTerms || user.company?.agreedToTerms || false,
+          addresses: apiCompany?.addresses || user.company?.addresses || [],
+          mailingAddresses: apiCompany?.mailingAddresses || user.company?.mailingAddresses || [],
+          users: apiCompany?.users || user.company?.users || [],
+          brochures: apiCompany?.brochures || user.company?.brochures || [],
+          gstCertificates: apiCompany?.gstCertificates || user.company?.gstCertificates || [],
+          cinDocuments: apiCompany?.cinDocuments || user.company?.cinDocuments || []
+        } as any;
+        setCompanyForm(companyData);
+      } else {
+        // Fallback to existing embedded user data
+        const companyData = {
+          name: user.company?.name || user.companyName || "",
+          description: user.company?.description || "",
+          website: user.company?.website || "",
+          logo: user.company?.logo || "",
+          parentCompany: user.company?.parentCompany || "",
+          parentCompanyNotAvailable: user.company?.parentCompanyNotAvailable || false,
+          parentCompanyDescription: user.company?.parentCompanyDescription || "",
+          registrationNumber: user.company?.registrationNumber || "",
+          yearEstablished: user.company?.yearEstablished || "",
+          numEmployees: user.company?.numEmployees || "",
+          servicesOffered: user.company?.servicesOffered || "",
+          currency: user.company?.currency || "",
+          gstNumber: user.company?.gstNumber || "",
+          cin: user.company?.cin || "",
+          natureOfBusiness: user.company?.natureOfBusiness || [],
+          typeOfBusiness: user.company?.typeOfBusiness || [],
+          categories: user.company?.categories || [],
+          subscriptionPlan: user.company?.subscriptionPlan || "single",
+          agreedToTerms: user.company?.agreedToTerms || false,
+          addresses: user.company?.addresses || [],
+          mailingAddresses: user.company?.mailingAddresses || [],
+          users: user.company?.users || [],
+          brochures: user.company?.brochures || [],
+          gstCertificates: user.company?.gstCertificates || [],
+          cinDocuments: user.company?.cinDocuments || []
+        } as any;
+        setCompanyForm(companyData);
+      }
+    } catch {
+      // Silent fallback
+      const companyData = {
+        name: user.company?.name || user.companyName || "",
+        description: user.company?.description || "",
+        website: user.company?.website || "",
+        logo: user.company?.logo || "",
+        parentCompany: user.company?.parentCompany || "",
+        parentCompanyNotAvailable: user.company?.parentCompanyNotAvailable || false,
+        parentCompanyDescription: user.company?.parentCompanyDescription || "",
+        registrationNumber: user.company?.registrationNumber || "",
+        yearEstablished: user.company?.yearEstablished || "",
+        numEmployees: user.company?.numEmployees || "",
+        servicesOffered: user.company?.servicesOffered || "",
+        currency: user.company?.currency || "",
+        gstNumber: user.company?.gstNumber || "",
+        cin: user.company?.cin || "",
+        natureOfBusiness: user.company?.natureOfBusiness || [],
+        typeOfBusiness: user.company?.typeOfBusiness || [],
+        categories: user.company?.categories || [],
+        subscriptionPlan: user.company?.subscriptionPlan || "single",
+        agreedToTerms: user.company?.agreedToTerms || false,
+        addresses: user.company?.addresses || [],
+        mailingAddresses: user.company?.mailingAddresses || [],
+        users: user.company?.users || [],
+        brochures: user.company?.brochures || [],
+        gstCertificates: user.company?.gstCertificates || [],
+        cinDocuments: user.company?.cinDocuments || []
+      } as any;
+      setCompanyForm(companyData);
+    }
     setShowCompanyModal(true);
   };
 
@@ -515,9 +582,9 @@ export default function UsersManagementPage() {
           <div className="text-red-600">{error}</div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
+        <div className="bg-white rounded-lg border overflow-auto w-full">
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[1200px] w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -535,7 +602,7 @@ export default function UsersManagementPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Login
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -543,7 +610,7 @@ export default function UsersManagementPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map(user => (
                   <tr key={user._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-normal break-words">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {user.profilePicture ? (
@@ -569,7 +636,7 @@ export default function UsersManagementPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-normal break-words">
                       <div className="text-sm text-gray-900">{user.companyName || 'N/A'}</div>
                       <div className="text-sm text-gray-500 capitalize">{user.companyType}</div>
                       {user.company && (
@@ -622,10 +689,10 @@ export default function UsersManagementPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-500">
                       {user.lastLogin ? new Date(user.lastLogin).toISOString().split('T')[0] : 'Never'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm font-medium sticky right-0 z-10 bg-white">
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/admin-management/users/${user._id}`}
@@ -634,13 +701,6 @@ export default function UsersManagementPage() {
                         >
                           <EyeIcon width={16} height={16} />
                         </Link>
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit User"
-                        >
-                          <PencilIcon width={16} height={16} />
-                        </button>
                         {user.roles.includes('seller') && (
                           <button
                             onClick={() => handleEditCompany(user)}
@@ -650,7 +710,6 @@ export default function UsersManagementPage() {
                             <GridIcon width={16} height={16} />
                           </button>
                         )}
-                        
                       </div>
                     </td>
                   </tr>

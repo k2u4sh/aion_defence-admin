@@ -12,10 +12,10 @@ const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
   className = "" 
 }) => {
   return (
-    <div className={`overflow-x-auto -mx-2 sm:-mx-4 lg:-mx-6 ${className}`}>
-      <div className="inline-block min-w-full align-middle px-2 sm:px-4 lg:px-6">
-        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+    <div className={`w-full overflow-x-auto ${className}`}>
+      <div className="inline-block w-full align-middle">
+        <div className="w-full overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+          <table className="min-w-[1400px] w-full divide-y divide-gray-300 dark:divide-gray-700">
             {children}
           </table>
         </div>

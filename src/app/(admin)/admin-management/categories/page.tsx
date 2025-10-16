@@ -61,6 +61,7 @@ const CategoriesPage = () => {
 
   // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
   const [parentCategoryFilter, setParentCategoryFilter] = useState("");
@@ -77,8 +78,13 @@ const CategoriesPage = () => {
   const [loadingSubCounts, setLoadingSubCounts] = useState(false);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
     fetchCategories();
-  }, [currentPage, search, statusFilter, levelFilter, parentCategoryFilter, sortBy, sortOrder]);
+  }, [currentPage, debouncedSearch, statusFilter, levelFilter, parentCategoryFilter, sortBy, sortOrder]);
 
   const fetchCategories = async () => {
     try {
@@ -86,7 +92,7 @@ const CategoriesPage = () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
-        search,
+        search: debouncedSearch,
         status: statusFilter,
         level: levelFilter,
         parentCategory: parentCategoryFilter,
@@ -414,22 +420,13 @@ const CategoriesPage = () => {
                     Created <SortIcon field="createdAt" />
                   </button>
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky right-0 z-20 bg-gray-50 dark:bg-gray-700">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400">Loading categories...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : categories.length === 0 ? (
+              {categories.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="text-center">
@@ -498,7 +495,7 @@ const CategoriesPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {new Date(category.createdAt).toISOString().split('T')[0]}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 bg-white dark:bg-gray-800">
                       <div className="flex justify-end gap-2">
                         <Link
                           href={`/admin-management/categories/${category._id}`}

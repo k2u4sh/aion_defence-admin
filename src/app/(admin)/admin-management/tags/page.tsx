@@ -52,6 +52,7 @@ const TagsPage = () => {
 
   // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [colorFilter, setColorFilter] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
@@ -64,8 +65,13 @@ const TagsPage = () => {
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
     fetchTags();
-  }, [currentPage, search, statusFilter, colorFilter, sortBy, sortOrder]);
+  }, [currentPage, debouncedSearch, statusFilter, colorFilter, sortBy, sortOrder]);
 
   const fetchTags = async () => {
     try {
@@ -73,7 +79,7 @@ const TagsPage = () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
-        search,
+        search: debouncedSearch,
         status: statusFilter,
         color: colorFilter,
         sortBy,
@@ -311,27 +317,18 @@ const TagsPage = () => {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Usage Count
+                  Products
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky right-0 z-20 bg-gray-50 dark:bg-gray-700">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-        {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400">Loading tags...</span>
-          </div>
-                  </td>
-                </tr>
-              ) : tags.length === 0 ? (
+        {tags.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="text-center">
@@ -372,12 +369,14 @@ const TagsPage = () => {
                       {getStatusBadge(tag.isActive)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {tag.usageCount || 0}
+                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {tag.usageCount || 0} products
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {new Date(tag.createdAt).toISOString().split('T')[0]}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 z-10 bg-white dark:bg-gray-800">
                       <div className="flex justify-end gap-2">
                         <Link
                           href={`/admin-management/tags/${tag._id}`}

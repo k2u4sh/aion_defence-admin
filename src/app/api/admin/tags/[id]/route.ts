@@ -41,10 +41,19 @@ export async function GET(
       );
     }
 
+    // Attach product count for this tag
+    const productCount = await Product.countDocuments({
+      tags: id,
+      $or: [
+        { deletedAt: null },
+        { deletedAt: { $exists: false } }
+      ]
+    });
+
     return NextResponse.json({
       success: true,
       message: "Tag fetched successfully",
-      data: tag
+      data: { ...tag, productCount }
     });
 
   } catch (error) {

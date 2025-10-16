@@ -115,6 +115,7 @@ const ProductsPage = () => {
   const [sellers, setSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
@@ -143,11 +144,16 @@ const ProductsPage = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchProducts();
     fetchCategories();
     fetchSellers();
     fetchStats();
-  }, [currentPage, searchTerm, selectedStatus, selectedCategory, selectedSubCategory, selectedSeller, minPrice, maxPrice, stockFilter, featuredFilter]);
+  }, [currentPage, debouncedSearchTerm, selectedStatus, selectedCategory, selectedSubCategory, selectedSeller, minPrice, maxPrice, stockFilter, featuredFilter]);
 
   const fetchProducts = async () => {
     try {
@@ -160,7 +166,7 @@ const ProductsPage = () => {
       });
 
       // Only add non-empty filter parameters
-      if (searchTerm) params.append("search", searchTerm);
+      if (debouncedSearchTerm) params.append("search", debouncedSearchTerm);
       if (selectedStatus) params.append("status", selectedStatus);
       if (selectedCategory) params.append("category", selectedCategory);
       if (selectedSubCategory) params.append("subCategory", selectedSubCategory);
@@ -531,46 +537,40 @@ const ProductsPage = () => {
       )}
 
       {/* Products Table */}
-      <ResponsiveTable className="bg-white dark:bg-gray-800 rounded-lg border">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+      <ResponsiveTable className="bg-white dark:bg-gray-800 rounded-lg border w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[28%]">
                   Product
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                   SKU
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[18%]">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[12%]">
                   Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                   Stock
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[12%]">
                   Seller
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                   Rating
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky right-0 z-20 bg-gray-50 dark:bg-gray-700">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    Loading products...
-                  </td>
-                </tr>
-              ) : products.length === 0 ? (
+              {products.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No products found
@@ -579,7 +579,7 @@ const ProductsPage = () => {
               ) : (
                 (products || []).map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-normal break-words">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-12 w-12">
                           {product.images && product.images.length > 0 ? (
@@ -664,10 +664,10 @@ const ProductsPage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-mono">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white font-mono">
                       {product.sku}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white">
                       <div>
                         <div>
                           {typeof product.category === 'string' ? product.category : product.category?.name || "Uncategorized"}
@@ -679,7 +679,7 @@ const ProductsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white">
                       <div>
                         <div className="font-medium">${product.basePrice.toFixed(2)}</div>
                         {product.comparePrice && product.comparePrice > product.basePrice && (
@@ -689,13 +689,13 @@ const ProductsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white">
                       <div>
                         <div className="font-medium">{product.quantity || 0}</div>
                         {getStockStatus(product.quantity || 0, product.lowStockThreshold || 10)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white">
                       <div>
                         <div>{product.seller?.firstName} {product.seller?.lastName}</div>
                         {product.seller?.companyName && (
@@ -703,7 +703,7 @@ const ProductsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 dark:text-white">
                       <div className="flex items-center">
                         <div className="flex items-center">
                           {[...Array(5)].map((_, i) => (
@@ -724,7 +724,7 @@ const ProductsPage = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-normal break-words">
                       <div className="flex flex-col gap-1">
                         {getStatusBadge(product.status || 'draft')}
                         {product.isFeatured && (
@@ -735,7 +735,7 @@ const ProductsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm font-medium sticky right-0 z-10 bg-white dark:bg-gray-800">
                       <div className="flex gap-2">
                         <Link
                           href={`/admin-management/products/${product._id}`}
@@ -786,11 +786,30 @@ const ProductsPage = () => {
             slug: (selectedProduct as any).slug || selectedProduct.name.toLowerCase().replace(/\s+/g, '-'),
             description: (selectedProduct as any).description || '',
             shortDescription: (selectedProduct as any).shortDescription || '',
-            category: (selectedProduct as any).category?._id || '',
-            subCategory: (selectedProduct as any).subCategory?._id || '',
+            category: typeof (selectedProduct as any).category === 'object' ? (selectedProduct as any).category?._id || '' : (selectedProduct as any).category || '',
+            subCategory: typeof (selectedProduct as any).subCategory === 'object' ? (selectedProduct as any).subCategory?._id || '' : (selectedProduct as any).subCategory || '',
             seller: (selectedProduct as any).seller?._id || '',
             supplier: (selectedProduct as any).supplier?._id || '',
             tags: (selectedProduct.tags || []).map((t: any) => t._id),
+            images: Array.isArray((selectedProduct as any).images)
+              ? (selectedProduct as any).images.map((img: any, idx: number) => (
+                  typeof img === 'string'
+                    ? { url: img, alt: selectedProduct.name, isPrimary: idx === 0, order: idx }
+                    : {
+                        url: img.url || '',
+                        alt: img.alt || selectedProduct.name,
+                        isPrimary: Boolean(img.isPrimary),
+                        order: typeof img.order === 'number' ? img.order : idx
+                      }
+                ))
+              : [],
+            videos: Array.isArray((selectedProduct as any).videos)
+              ? (selectedProduct as any).videos.map((v: any, idx: number) => (
+                  typeof v === 'string'
+                    ? { url: v, title: `Video ${idx + 1}`, description: '' }
+                    : { url: v.url || '', title: v.title || `Video ${idx + 1}`, description: v.description || '' }
+                ))
+              : [],
             basePrice: selectedProduct.basePrice,
             comparePrice: (selectedProduct as any).comparePrice || 0,
             cost: (selectedProduct as any).cost || 0,
@@ -810,12 +829,6 @@ const ProductsPage = () => {
             allowBackorder: (selectedProduct as any).allowBackorder ?? false,
             taxable: (selectedProduct as any).taxable ?? true,
             taxRate: (selectedProduct as any).taxRate || 0,
-            images: (selectedProduct.images || []).map((img: any, idx: number) => ({
-              url: img.url,
-              alt: img.alt || '',
-              isPrimary: Boolean(img.isPrimary),
-              order: Number(img.order ?? idx)
-            })),
             specifications: (selectedProduct as any).specifications || [],
             seo: {
               metaTitle: (selectedProduct as any).seoTitle || '',

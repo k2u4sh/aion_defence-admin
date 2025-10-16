@@ -35,6 +35,7 @@ const TagDetailPage = () => {
   const [tag, setTag] = useState<Tag | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
 
   const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
@@ -42,6 +43,7 @@ const TagDetailPage = () => {
   useEffect(() => {
     if (tagId) {
       fetchTag();
+      fetchProductsByTag();
     }
   }, [tagId]);
 
@@ -61,6 +63,18 @@ const TagDetailPage = () => {
       setError("Failed to fetch tag");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProductsByTag = async () => {
+    try {
+      const res = await fetch(`/api/admin/products?tag=${tagId}&limit=10`);
+      const js = await res.json();
+      if (js?.success) {
+        setProducts(js.data.products || []);
+      }
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -145,7 +159,10 @@ const TagDetailPage = () => {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{tag.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{tag.name}</h1>
+              <Badge color="info">{tag.productCount || 0} products</Badge>
+            </div>
             <p className="text-gray-600 dark:text-gray-400">Slug: {tag.slug}</p>
           </div>
         </div>
@@ -264,6 +281,21 @@ const TagDetailPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Products (sample) */}
+          {products && products.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Products with this Tag</h2>
+              <ul className="space-y-3">
+                {products.map((p) => (
+                  <li key={p._id} className="flex items-center justify-between">
+                    <span className="truncate max-w-[70%]" title={p.name}>{p.name}</span>
+                    <Link href={`/admin-management/products/${p._id}`} className="text-blue-600 dark:text-blue-400 text-sm">View</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* SEO Information */}
           {(tag.seoTitle || tag.seoDescription) && (

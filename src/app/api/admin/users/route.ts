@@ -78,7 +78,10 @@ export async function GET(request: NextRequest) {
     // Get users with company information
     const users = await User.find(query)
       .select("-password")
-      .populate("company")
+      .populate({
+        path: "company",
+        select: "name description website logo parentCompany parentCompanyNotAvailable parentCompanyDescription registrationNumber yearEstablished numEmployees servicesOffered currency gstNumber gstCertificates cin cinDocuments categories natureOfBusiness typeOfBusiness subscriptionPlan agreedToTerms addresses mailingAddresses users brochures createdAt updatedAt"
+      })
       .sort(sort)
       .skip(skip)
       .limit(limit)

@@ -102,6 +102,119 @@ export default function CreateUserPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createCompanyNow, setCreateCompanyNow] = useState(false);
+  const [companyForm, setCompanyForm] = useState({
+    name: "",
+    description: "",
+    website: "",
+    gstNumber: "",
+    cin: "",
+    subscriptionPlan: "single",
+    agreedToTerms: false,
+    addresses: [
+      { line1: "", line2: "", line3: "", country: "", state: "", city: "", zipCode: "", email: "", mobile: "", landline: "", isMailing: false }
+    ] as any[]
+  });
+  // Reference dropdown data (countries/states/cities)
+  const [countries, setCountries] = useState<any[]>([]);
+  const [statesByCountry, setStatesByCountry] = useState<Record<number, any[]>>({});
+  const [citiesByState, setCitiesByState] = useState<Record<number, any[]>>({});
+  // Per-address selection ids to fetch cascades
+  const [addressMeta, setAddressMeta] = useState<Array<{ countryId?: number; stateId?: number }>>([{ }]);
+
+  const setCompanyField = (field: string, value: any) => {
+    setCompanyForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const setCompanyAddressField = (index: number, field: string, value: any) => {
+    setCompanyForm(prev => {
+      const list = [ ...(prev.addresses || []) ];
+      const updated = { ...(list[index] || {}) } as any;
+      updated[field] = value;
+      list[index] = updated;
+      return { ...prev, addresses: list } as any;
+    });
+  };
+
+  const addCompanyAddress = () => {
+    setCompanyForm(prev => ({
+      ...prev,
+      addresses: [ ...(prev.addresses || []), { line1: "", line2: "", line3: "", country: "", state: "", city: "", zipCode: "", email: "", mobile: "", landline: "", isMailing: false } ]
+    }));
+    setAddressMeta(prev => ([ ...prev, {} ]));
+  };
+
+  const removeCompanyAddress = (idx: number) => {
+    setCompanyForm(prev => {
+      const list = [ ...(prev.addresses || []) ];
+      list.splice(idx, 1);
+      return { ...prev, addresses: list } as any;
+    });
+    setAddressMeta(prev => {
+      const meta = [ ...prev ];
+      meta.splice(idx, 1);
+      return meta;
+    });
+  };
+
+  // Load countries when company section opens
+  React.useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const res = await fetch('/api/reference/countries?limit=250');
+        const js = await res.json();
+        if (js?.success) setCountries(js.data || []);
+      } catch {}
+    };
+    if (createCompanyNow && countries.length === 0) loadCountries();
+  }, [createCompanyNow]);
+
+  const onSelectCountry = async (addrIdx: number, countryIdStr: string) => {
+    const id = parseInt(countryIdStr, 10);
+    const country = countries.find(c => c.id === id);
+    setAddressMeta(prev => {
+      const next = [ ...prev ];
+      next[addrIdx] = { countryId: id, stateId: undefined };
+      return next;
+    });
+    setCompanyAddressField(addrIdx, 'country', country?.name || '');
+    setCompanyAddressField(addrIdx, 'state', '');
+    setCompanyAddressField(addrIdx, 'city', '');
+    // fetch states
+    try {
+      const res = await fetch(`/api/reference/states?countryId=${id}`);
+      const js = await res.json();
+      if (js?.success) setStatesByCountry(prev => ({ ...prev, [id]: js.data || [] }));
+    } catch {}
+  };
+
+  const onSelectState = async (addrIdx: number, stateIdStr: string) => {
+    const id = parseInt(stateIdStr, 10);
+    const meta = addressMeta[addrIdx] || {};
+    const states = meta.countryId ? (statesByCountry[meta.countryId] || []) : [];
+    const st = states.find((s: any) => s.id === id);
+    setAddressMeta(prev => {
+      const next = [ ...prev ];
+      next[addrIdx] = { ...(next[addrIdx] || {}), stateId: id };
+      return next;
+    });
+    setCompanyAddressField(addrIdx, 'state', st?.name || '');
+    setCompanyAddressField(addrIdx, 'city', '');
+    // fetch cities
+    try {
+      const res = await fetch(`/api/reference/cities?stateId=${id}`);
+      const js = await res.json();
+      if (js?.success) setCitiesByState(prev => ({ ...prev, [id]: js.data || [] }));
+    } catch {}
+  };
+
+  const onSelectCity = (addrIdx: number, cityIdStr: string) => {
+    const id = parseInt(cityIdStr, 10);
+    const stId = addressMeta[addrIdx]?.stateId;
+    const cities = stId ? (citiesByState[stId] || []) : [];
+    const city = cities.find((c: any) => c.id === id);
+    setCompanyAddressField(addrIdx, 'city', city?.name || '');
+  };
 
   const handleInputChange = (field: keyof UserFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -205,6 +318,53 @@ export default function CreateUserPage() {
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create user');
+      }
+
+      // If company creation requested, create/update company for this user
+      if (createCompanyNow && data?.data?._id) {
+        const userId = data.data._id;
+        const token2 = localStorage.getItem('accessToken');
+        const companyPayload = {
+          companyName: companyForm.name || formData.companyName,
+          companyType: formData.companyType,
+          company: {
+            name: companyForm.name || formData.companyName,
+            description: companyForm.description || `${formData.companyName} - company description`,
+            website: companyForm.website,
+            gstNumber: companyForm.gstNumber,
+            cin: companyForm.cin,
+            subscriptionPlan: companyForm.subscriptionPlan as any,
+            agreedToTerms: !!companyForm.agreedToTerms,
+            addresses: (companyForm.addresses || []).map(a => ({
+              line1: a.line1,
+              line2: a.line2 || "",
+              line3: a.line3 || "",
+              country: a.country,
+              state: a.state || "",
+              city: a.city || "",
+              zipCode: a.zipCode,
+              email: a.email || "",
+              mobile: a.mobile || "",
+              landline: a.landline || "",
+              isMailing: !!a.isMailing
+            })),
+            mailingAddresses: []
+          }
+        };
+
+        try {
+          await fetch(`/api/admin/users/${userId}/company`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token2 ? { Authorization: `Bearer ${token2}` } : {})
+            },
+            body: JSON.stringify(companyPayload)
+          });
+        } catch (e) {
+          // Non-blocking; proceed to success
+          console.error('Company create/update failed:', e);
+        }
       }
 
       setShowSuccessModal(true);
@@ -335,6 +495,121 @@ export default function CreateUserPage() {
               </select>
             </div>
           </div>
+
+          {/* Create Company Now toggle */}
+          <div className="mt-4">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" className="rounded border-gray-300" checked={createCompanyNow} onChange={(e) => setCreateCompanyNow(e.target.checked)} />
+              Create Company now
+            </label>
+          </div>
+
+          {createCompanyNow && (
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Company Name</label>
+                  <input type="text" value={companyForm.name} onChange={(e) => setCompanyField('name', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Website</label>
+                  <input type="url" value={companyForm.website} onChange={(e) => setCompanyField('website', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea value={companyForm.description} onChange={(e) => setCompanyField('description', e.target.value)} rows={3} className="w-full px-3 py-2 border rounded" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">GST Number</label>
+                  <input type="text" value={companyForm.gstNumber} onChange={(e) => setCompanyField('gstNumber', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">CIN</label>
+                  <input type="text" value={companyForm.cin} onChange={(e) => setCompanyField('cin', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Subscription Plan</label>
+                  <select value={companyForm.subscriptionPlan} onChange={(e) => setCompanyField('subscriptionPlan', e.target.value)} className="w-full px-3 py-2 border rounded">
+                    <option value="single">Single</option>
+                    <option value="multiple">Multiple</option>
+                    <option value="decide_later">Decide later</option>
+                  </select>
+                </div>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" className="rounded border-gray-300" checked={companyForm.agreedToTerms} onChange={(e) => setCompanyField('agreedToTerms', e.target.checked)} />
+                Agreed to Terms
+              </label>
+
+              {/* Company Addresses */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Company Addresses</h3>
+                  <button type="button" onClick={addCompanyAddress} className="px-3 py-1 text-sm border rounded hover:bg-gray-50">Add Address</button>
+                </div>
+                <div className="space-y-4">
+                  {(companyForm.addresses || []).map((addr: any, idx: number) => {
+                    const meta = addressMeta[idx] || {};
+                    const states = meta.countryId ? (statesByCountry[meta.countryId] || []) : [];
+                    const cities = meta.stateId ? (citiesByState[meta.stateId] || []) : [];
+                    return (
+                      <div key={idx} className="border rounded p-4 space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <input type="text" placeholder="Address line 1" value={addr.line1} onChange={(e) => setCompanyAddressField(idx, 'line1', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                          <input type="text" placeholder="Address line 2" value={addr.line2 || ''} onChange={(e) => setCompanyAddressField(idx, 'line2', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                          <input type="text" placeholder="Address line 3" value={addr.line3 || ''} onChange={(e) => setCompanyAddressField(idx, 'line3', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Country</label>
+                            <select value={meta.countryId || ''} onChange={(e) => onSelectCountry(idx, e.target.value)} className="w-full px-3 py-2 border rounded">
+                              <option value="">Select Country</option>
+                              {countries.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">State</label>
+                            <select value={meta.stateId || ''} onChange={(e) => onSelectState(idx, e.target.value)} className="w-full px-3 py-2 border rounded" disabled={!meta.countryId}>
+                              <option value="">Select State</option>
+                              {states.map((s: any) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">City</label>
+                            <select value={addr.city ? (cities.find((c:any)=>c.name===addr.city)?.id || '') : ''} onChange={(e) => onSelectCity(idx, e.target.value)} className="w-full px-3 py-2 border rounded" disabled={!meta.stateId}>
+                              <option value="">Select City</option>
+                              {cities.map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <input type="text" placeholder="Zip/Pin" value={addr.zipCode || ''} onChange={(e) => setCompanyAddressField(idx, 'zipCode', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <input type="email" placeholder="Email" value={addr.email || ''} onChange={(e) => setCompanyAddressField(idx, 'email', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                          <input type="text" placeholder="Mobile" value={addr.mobile || ''} onChange={(e) => setCompanyAddressField(idx, 'mobile', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                          <input type="text" placeholder="Landline" value={addr.landline || ''} onChange={(e) => setCompanyAddressField(idx, 'landline', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <label className="inline-flex items-center gap-2 text-sm">
+                            <input type="checkbox" className="rounded border-gray-300" checked={!!addr.isMailing} onChange={(e) => setCompanyAddressField(idx, 'isMailing', e.target.checked)} />
+                            Mailing Address
+                          </label>
+                          <button type="button" onClick={() => removeCompanyAddress(idx)} className="text-sm text-red-600 hover:underline">Remove</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Addresses */}

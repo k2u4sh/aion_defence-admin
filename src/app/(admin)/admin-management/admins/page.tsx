@@ -256,8 +256,8 @@ export default function AdminsPage() {
                 <p className="text-gray-500 dark:text-gray-400">No admins found matching your filters.</p>
               </div>
             ) : (
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-[1400px] w-full text-sm">
                   <thead>
                     <tr className="text-left border-b border-gray-200 dark:border-gray-700">
                       <th className="p-3 font-medium text-gray-700 dark:text-gray-300">Name</th>

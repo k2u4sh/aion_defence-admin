@@ -150,7 +150,10 @@ const CategoryDetailPage = () => {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{category.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{category.name}</h1>
+              <Badge color="info">{category.productCount || 0} products</Badge>
+            </div>
             <p className="text-gray-600 dark:text-gray-400">Slug: {category.slug}</p>
           </div>
         </div>

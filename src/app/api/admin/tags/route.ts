@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase as connectDB } from "@/lib/db";
 import Tag from "@/models/tagModel";
+import Product from "@/models/productModel";
+import mongoose from "mongoose";
 import { requireAdminAuth } from "@/utils/adminAccess";
 
 // Ensure models are registered
 const ensureModelsRegistered = () => {
   // These imports will register the models with Mongoose
   Tag;
+  Product;
 };
 
 // GET /api/admin/tags - Get all tags with pagination and filters
@@ -77,6 +80,27 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    // Attach product usage counts per tag (robust to string/ObjectId storage)
+    const tagIds = tags.map(t => t._id);
+    const tagIdStrings = tagIds.map((id: any) => String(id));
+    const counts = await Product.aggregate([
+      {
+        $match: {
+          $or: [ { deletedAt: null }, { deletedAt: { $exists: false } } ]
+        }
+      },
+      { $unwind: "$tags" },
+      { $addFields: { tagKey: { $toString: "$tags" } } },
+      { $match: { tagKey: { $in: tagIdStrings } } },
+      { $group: { _id: "$tagKey", count: { $sum: 1 } } }
+    ]);
+    const idToCount: Record<string, number> = {} as any;
+    counts.forEach((c: any) => { idToCount[String(c._id)] = c.count; });
+    const tagsWithCounts = tags.map(t => ({
+      ...t,
+      usageCount: idToCount[String(t._id)] || 0
+    }));
+
     // Get total count
     const total = await Tag.countDocuments(query);
 
@@ -113,7 +137,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Tags fetched successfully",
-      data: tags,
+      data: tagsWithCounts,
       pagination: {
         page,
         limit,

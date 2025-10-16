@@ -142,10 +142,19 @@ export async function POST(request: NextRequest) {
 		delete userResponse.password;
 		
 		return ApiResponseHandler.success(userResponse, "User created successfully");
-	} catch (err) {
-		console.error("Create user error:", err);
-		return ApiResponseHandler.error("Internal Server Error", 500);
-	}
+  } catch (err: any) {
+    console.error("Create user error:", err);
+    // Surface validation and duplicate errors clearly to the client
+    if (err?.name === 'ValidationError') {
+      const firstKey = Object.keys(err.errors || {})[0];
+      const message = firstKey ? (err.errors[firstKey]?.message || 'Validation error') : 'Validation error';
+      return ApiResponseHandler.error(message, 400);
+    }
+    if (err?.code === 11000) {
+      return ApiResponseHandler.error("User with this email already exists", 400);
+    }
+    return ApiResponseHandler.error(err?.message || "Internal Server Error", 500);
+  }
 }
 
 // PUT /api/users - update user fields

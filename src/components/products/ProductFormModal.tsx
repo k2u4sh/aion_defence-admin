@@ -165,18 +165,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     sku: "",
     barcode: "",
     quantity: 0,
-    frozenStock: 0,
     lowStockThreshold: 10,
-    quantityPerOrder: "1",
-    daysToCompleteOrder: "1-3",
-    stockType: "instock",
     weight: 0,
     weightUnit: "kg",
     dimensions: { length: 0, width: 0, height: 0 },
     dimensionUnit: "cm",
-    makeModel: "",
-    materialType: "",
-    unitsAvailable: "",
     status: "draft",
     isVisible: true,
     isFeatured: false,
@@ -186,7 +179,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     taxable: true,
     taxRate: 0,
     images: [],
-    videos: [],
     specifications: [],
     seo: {
       metaTitle: "",
@@ -476,7 +468,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setUploadProgress(0);
 
     try {
-      const fileArray = Array.from(files);
+      const currentCount = (formData.images?.length || 0);
+      const MAX_IMAGES = 6;
+      const remaining = MAX_IMAGES - currentCount;
+      if (remaining <= 0) {
+        alert('You can upload a maximum of 6 images.');
+        return;
+      }
+      const fileArray = Array.from(files).slice(0, remaining);
       const results = await uploadService.uploadProductFiles(
         fileArray,
         'image',
@@ -502,7 +501,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       setFormData(prev => ({
         ...prev,
-        images: [...(prev.images || []), ...newImages]
+        images: [...(prev.images || []), ...newImages].slice(0, MAX_IMAGES)
       }));
 
     } catch (error) {
@@ -517,12 +516,32 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
+    // Enforce single video and size limit 10MB
+    if (files.length > 1) {
+      alert('Please upload only one video.');
+      return;
+    }
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (files[0].size > MAX_BYTES) {
+      alert('Video exceeds 10 MB limit.');
+      return;
+    }
+    if ((formData.videos?.length || 0) >= 1) {
+      alert('Only one video is allowed. Remove the existing one to upload another.');
+      return;
+    }
 
     setUploadingVideos(true);
     setUploadProgress(0);
 
     try {
-      const fileArray = Array.from(files);
+      const fileArray = Array.from(files).slice(0, 1);
+      // Immediate local preview for edit form
+      const previewUrl = URL.createObjectURL(fileArray[0]);
+      setFormData(prev => ({
+        ...prev,
+        videos: [{ url: previewUrl, title: fileArray[0].name, description: '', __temp: true } as any]
+      }));
       const results = await uploadService.uploadProductFiles(
         fileArray,
         'video',
@@ -538,17 +557,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         }
       );
 
-      // Add uploaded videos to form data
-      const newVideos = results.map(result => ({
-        url: result.url!,
-        title: result.originalName || '',
-        description: ''
-      }));
-
-      setFormData(prev => ({
-        ...prev,
-        videos: [...(prev.videos || []), ...newVideos]
-      }));
+      // Replace preview with uploaded
+      const uploaded = results[0];
+      if (uploaded && uploaded.url) {
+        setFormData(prev => ({
+          ...prev,
+          videos: [{ url: uploaded.url, title: uploaded.originalName || fileArray[0].name, description: '' }]
+        }));
+      }
 
     } catch (error) {
       console.error('Video upload error:', error);
@@ -597,6 +613,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         taxable: formData.taxable,
         taxRate: formData.taxRate,
         images: formData.images || [],
+        videos: (formData.videos || []).map((v: any, idx: number) => ({
+          url: typeof v === 'string' ? v : v.url,
+          title: typeof v === 'object' ? (v.title || `Video ${idx + 1}`) : `Video ${idx + 1}`,
+          description: typeof v === 'object' ? (v.description || '') : '',
+          thumbnail: typeof v === 'object' ? (v.thumbnail || '') : ''
+        })),
         specifications: formData.specifications || [],
         seo: formData.seo || { metaTitle: "", metaDescription: "", keywords: [], canonicalUrl: "" },
       };
@@ -1147,7 +1169,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <span className="text-sm text-gray-600">
                     {uploadingVideos ? `Uploading... ${uploadProgress}%` : 'Click to upload videos'}
                   </span>
-                  <span className="text-xs text-gray-500">MP4, AVI, MOV, WebM (max 100MB each)</span>
+                  <span className="text-xs text-gray-500">MP4, AVI, MOV, WebM (max 10MB each)</span>
                 </label>
                 {uploadingVideos && (
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
@@ -1262,54 +1284,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* ProductService Fields */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Product Service Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="title">Product Title</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={formData.title || ""}
-                  onChange={(e) => handleInputChange("title", e.target.value)}
-                  placeholder="Product title for display"
-                />
-              </div>
-              <div>
-                <Label htmlFor="productHeading">Product Heading</Label>
-                <Input
-                  id="productHeading"
-                  type="text"
-                  value={formData.productHeading || ""}
-                  onChange={(e) => handleInputChange("productHeading", e.target.value)}
-                  placeholder="Main product heading"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="productDescription">Product Description</Label>
-                <textarea
-                  id="productDescription"
-                  value={formData.productDescription || ""}
-                  onChange={(e) => handleInputChange("productDescription", e.target.value)}
-                  placeholder="Detailed product description"
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <Label htmlFor="unitsAvailable">Units Available</Label>
-                <Input
-                  id="unitsAvailable"
-                  type="text"
-                  value={formData.unitsAvailable || ""}
-                  onChange={(e) => handleInputChange("unitsAvailable", e.target.value)}
-                  placeholder="e.g., 100 units"
-                />
-              </div>
             </div>
           </div>
 

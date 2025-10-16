@@ -4,9 +4,10 @@ const addressSchema = new mongoose.Schema({
   line1: { type: String, required: true },
   line2: { type: String },
   line3: { type: String },
-  city: { type: String, required: true },
-  zipCode: { type: String, required: true },
   country: { type: String, required: true },
+  state: { type: String },
+  city: { type: String, required: false },
+  zipCode: { type: String, required: true },
   landline: { type: String },
   mobile: { type: String },
   email: { type: String },
@@ -23,7 +24,7 @@ const userDetailSchema = new mongoose.Schema({
 
 const companySchema = new mongoose.Schema({
   userId: { type: String, required: true }, // Link to registered user
-  slug: { type: String, required: true, unique: true }, // Unique slug for company
+  slug: { type: String, required: true }, // Unique slug for company
   name: { type: String, required: true },
   logo: { type: String }, // file path or URL
   description: { type: String, required: true },
@@ -43,8 +44,8 @@ const companySchema = new mongoose.Schema({
   numEmployees: { type: String },
   servicesOffered: { type: String },
   currency: { type: String },
-  gstNumber: { type: String },
-  gstCertificates: [{ type: String }], // file paths or URLs
+  gstNumber: { type: String, required: true },
+  gstCertificates: [{ type: String, required: true }], // file paths or URLs
   cin: { type: String },
   cinDocuments: [{ type: String }], // file paths or URLs
   categories: [{ type: String }],

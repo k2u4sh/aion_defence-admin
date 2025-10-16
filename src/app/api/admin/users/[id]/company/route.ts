@@ -29,10 +29,9 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get user with company information
+    // Get user
     const user = await User.findById(id)
       .select("company companyName companyType")
-      .populate("company")
       .lean();
 
     if (!user) {
@@ -42,12 +41,54 @@ export async function GET(
       );
     }
 
+    // Resolve company document: prefer populated ref, otherwise find by userId
+    let companyDoc: any = null;
+    if (user.company) {
+      companyDoc = await Company.findById(user.company).lean();
+    }
+    if (!companyDoc) {
+      companyDoc = await Company.findOne({ userId: id }).lean();
+    }
+
+    // Normalize response to include all model fields with sensible defaults
+    const normalizedCompany = companyDoc ? {
+      _id: companyDoc._id,
+      userId: companyDoc.userId,
+      slug: companyDoc.slug,
+      name: companyDoc.name || "",
+      logo: companyDoc.logo || "",
+      description: companyDoc.description || "",
+      addresses: Array.isArray(companyDoc.addresses) ? companyDoc.addresses : [],
+      mailingAddresses: Array.isArray(companyDoc.mailingAddresses) ? companyDoc.mailingAddresses : [],
+      parentCompany: companyDoc.parentCompany || "",
+      parentCompanyNotAvailable: !!companyDoc.parentCompanyNotAvailable,
+      parentCompanyDescription: companyDoc.parentCompanyDescription || "",
+      website: companyDoc.website || "",
+      brochures: Array.isArray(companyDoc.brochures) ? companyDoc.brochures : [],
+      users: Array.isArray(companyDoc.users) ? companyDoc.users : [],
+      subscriptionPlan: companyDoc.subscriptionPlan || "single",
+      natureOfBusiness: Array.isArray(companyDoc.natureOfBusiness) ? companyDoc.natureOfBusiness : [],
+      typeOfBusiness: Array.isArray(companyDoc.typeOfBusiness) ? companyDoc.typeOfBusiness : [],
+      registrationNumber: companyDoc.registrationNumber || "",
+      yearEstablished: companyDoc.yearEstablished || "",
+      numEmployees: companyDoc.numEmployees || "",
+      servicesOffered: companyDoc.servicesOffered || "",
+      currency: companyDoc.currency || "",
+      gstNumber: companyDoc.gstNumber || "",
+      gstCertificates: Array.isArray(companyDoc.gstCertificates) ? companyDoc.gstCertificates : [],
+      cin: companyDoc.cin || "",
+      cinDocuments: Array.isArray(companyDoc.cinDocuments) ? companyDoc.cinDocuments : [],
+      categories: Array.isArray(companyDoc.categories) ? companyDoc.categories : [],
+      agreedToTerms: !!companyDoc.agreedToTerms,
+      createdAt: companyDoc.createdAt || null,
+    } : null;
+
     return NextResponse.json({
       success: true,
       data: {
-        company: user.company,
-        companyName: user.companyName,
-        companyType: user.companyType
+        company: normalizedCompany,
+        companyName: user.companyName || (normalizedCompany?.name ?? ""),
+        companyType: user.companyType || "individual"
       }
     });
 

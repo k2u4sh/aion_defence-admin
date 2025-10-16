@@ -8,7 +8,7 @@ const ALLOWED_DOCUMENT_TYPES = ['pdf', 'doc', 'docx', 'txt'];
 
 // File size limits (in MB)
 const MAX_IMAGE_SIZE = 10;
-const MAX_VIDEO_SIZE = 100;
+const MAX_VIDEO_SIZE = 10; // Enforce 10MB video limit
 const MAX_DOCUMENT_SIZE = 50;
 
 export async function POST(request: NextRequest) {

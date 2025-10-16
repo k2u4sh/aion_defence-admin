@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "";
     const subCategory = searchParams.get("subCategory") || "";
     const seller = searchParams.get("seller") || "";
+    const tag = searchParams.get("tag") || "";
     const minPrice = searchParams.get("minPrice") || "";
     const maxPrice = searchParams.get("maxPrice") || "";
     const stockFilter = searchParams.get("stockFilter") || "";
@@ -137,6 +138,18 @@ export async function GET(request: NextRequest) {
 
     if (featured && featured !== "") {
       query.isFeatured = featured === "true";
+    }
+
+    if (tag) {
+      if (isValidObjectId(tag)) {
+        query.tags = tag;
+      } else {
+        // If it's not a valid ObjectId, search by tag name
+        const tagDoc = await Tag.findOne({ name: { $regex: tag, $options: "i" } });
+        if (tagDoc) {
+          query.tags = tagDoc._id;
+        }
+      }
     }
 
     // Build sort object

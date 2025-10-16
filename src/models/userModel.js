@@ -6,9 +6,6 @@ if (mongoose.models.User) {
   delete mongoose.models.User;
 }
 
-// Ensure Company model is registered first
-import Company from "./companyModel.js";
-
 // Address subdocument schema
 const addressSchema = new mongoose.Schema({
   firstName: {
@@ -37,7 +34,7 @@ const addressSchema = new mongoose.Schema({
   },
   city: {
     type: String,
-    required: [true, "City is required"],
+    required: false,
     trim: true
   },
   state: {
@@ -88,7 +85,7 @@ const billingAddressSchema = new mongoose.Schema({
   },
   city: {
     type: String,
-    required: [true, "City is required"],
+    required: false,
     trim: true
   },
   state: {
@@ -565,10 +562,6 @@ if (mongoose.models.User) {
 }
 
 const User = mongoose.model("User", userSchema);
-
-// Ensure Company model is registered
-Company;
-
 export default User;
 
 
